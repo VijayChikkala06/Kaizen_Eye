@@ -44,7 +44,12 @@
         }
       ],
       "expo-build-properties",
-      "react-native-fast-tflite",
+      [
+        "react-native-fast-tflite",
+        {
+          "enableAndroidGpuLibraries": true
+        }
+      ],
       "expo-asset"
     ]
   }

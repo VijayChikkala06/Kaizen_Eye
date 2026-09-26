@@ -73,15 +73,32 @@ export function CameraCapture({
   busy,
   multiple,
   captureLabel = 'Capture',
+  ghostUri,
+  disabled,
 }: {
   onImages: (uris: string[]) => void;
   busy: boolean;
   multiple: boolean;
   captureLabel?: string;
+  /** Reference photo drawn semi-transparently over the preview so every shot is framed the same way. */
+  ghostUri?: string | null;
+  disabled?: boolean;
 }) {
   const [permission, requestPermission] = useCameraPermissions();
   const cam = useRef<CameraView>(null);
   const [ready, setReady] = useState(false);
+  const [ghostOn, setGhostOn] = useState(true);
+  const [pictureSize, setPictureSize] = useState<string | undefined>(undefined);
+
+  const onCameraReady = async () => {
+    setReady(true);
+    try {
+      const pick = choosePictureSize((await cam.current?.getAvailablePictureSizesAsync()) ?? []);
+      if (pick) setPictureSize(pick);
+    } catch {
+      // keep the camera default
+    }
+  };
 
   const capture = async () => {
     if (!cam.current || busy) return;
@@ -119,9 +136,22 @@ export function CameraCapture({
           style={StyleSheet.absoluteFill}
           facing="back"
           autofocus="on"
-          onCameraReady={() => setReady(true)}
+          pictureSize={pictureSize}
+          onCameraReady={onCameraReady}
         />
+        {ghostUri && ghostOn ? (
+          <View pointerEvents="none" style={StyleSheet.absoluteFill}>
+            <Image source={{ uri: ghostUri }} style={[StyleSheet.absoluteFill, { opacity: 0.38 }]} />
+          </View>
+        ) : null}
         <View pointerEvents="none" style={styles.guide} />
+        {ghostUri ? (
+          <Pressable onPress={() => setGhostOn((g) => !g)} style={styles.ghostToggle}>
+            <Text style={{ color: '#fff', fontWeight: '700', fontSize: 12 }}>
+              {ghostOn ? 'Align guide ON' : 'Align guide OFF'}
+            </Text>
+          </Pressable>
+        ) : null}
         {busy ? (
           <View style={styles.busyOverlay}>
             <ActivityIndicator size="large" color={colors.accent} />
@@ -138,13 +168,30 @@ export function CameraCapture({
         <Button
           title={busy ? 'Working…' : captureLabel}
           onPress={capture}
-          disabled={busy || !permission?.granted || !ready}
+          disabled={busy || disabled || !permission?.granted || !ready}
           style={{ flex: 1, marginRight: 8 }}
         />
         <Button title={multiple ? 'Import photos' : 'From gallery'} kind="secondary" onPress={pick} disabled={busy} style={{ flex: 1 }} />
       </View>
     </View>
   );
+}
+
+/**
+ * Smallest 4:3 capture size whose short side is >= 1080 px. The model only needs 320 px and the result screen
+ * 1024 px, so a ~1.6 MP photo is plenty and far faster to decode than 12 MP. 4:3 keeps the full sensor field of
+ * view, so the centre square matches the preview and the alignment guide.
+ */
+function choosePictureSize(sizes: string[]): string | undefined {
+  const parsed = sizes
+    .map((s) => {
+      const m = /^(\d+)\s*x\s*(\d+)$/i.exec(s.trim());
+      return m ? { s, w: Number(m[1]), h: Number(m[2]) } : null;
+    })
+    .filter((p): p is { s: string; w: number; h: number } => p !== null)
+    .filter((p) => Math.abs(Math.max(p.w, p.h) / Math.min(p.w, p.h) - 4 / 3) < 0.02 && Math.min(p.w, p.h) >= 1080)
+    .sort((a, b) => a.w * a.h - b.w * b.h);
+  return parsed[0]?.s;
 }
 
 /** Heat map like tools/lab/viz.py: 1.0 of the colour scale == 2 x threshold; only warm areas show. */
@@ -242,14 +289,24 @@ const styles = StyleSheet.create({
   },
   guide: {
     position: 'absolute',
-    left: '6%',
-    top: '6%',
-    right: '6%',
-    bottom: '6%',
+    // The scored area: the outer 10% of the photo is ignored by the frame score (config.DETECTION.borderFraction).
+    left: '10%',
+    top: '10%',
+    right: '10%',
+    bottom: '10%',
     borderWidth: 2,
     borderColor: 'rgba(34,211,238,0.8)',
     borderRadius: 10,
     borderStyle: 'dashed',
+  },
+  ghostToggle: {
+    position: 'absolute',
+    top: 10,
+    right: 10,
+    backgroundColor: 'rgba(0,0,0,0.55)',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 14,
   },
   busyOverlay: {
     position: 'absolute',

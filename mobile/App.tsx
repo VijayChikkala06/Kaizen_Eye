@@ -2,8 +2,9 @@ import { StatusBar } from 'expo-status-bar';
 import { useCallback, useEffect, useState } from 'react';
 import { BackHandler, ScrollView, Text, useWindowDimensions, View } from 'react-native';
 
+import { DETECTION } from './src/config';
 import type { Profile } from './src/core/patchcore';
-import { loadBackbone } from './src/ml/backbone';
+import { BACKBONE, loadBackbone } from './src/ml/backbone';
 import { EnrolScreen } from './src/screens/EnrolScreen';
 import { HomeScreen, type ModelState } from './src/screens/HomeScreen';
 import { InspectScreen, ResultCard, type Inspection } from './src/screens/InspectScreen';
@@ -13,7 +14,7 @@ import { ui } from './src/ui/theme';
 
 type Screen = { name: 'home' } | { name: 'enrol' } | { name: 'inspect' } | { name: 'result'; r: Inspection };
 
-const DEFAULT_SENSITIVITY = 1.1;
+const DEFAULT_SENSITIVITY = DETECTION.defaultSensitivity;
 const MAX_HISTORY = 30;
 
 export default function App() {
@@ -22,6 +23,7 @@ export default function App() {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [sensitivity, setSensitivity] = useState(DEFAULT_SENSITIVITY);
   const [history, setHistory] = useState<Inspection[]>([]);
+  const [notice, setNotice] = useState<string | null>(null);
   const { width } = useWindowDimensions();
 
   const initModel = useCallback(() => {
@@ -34,7 +36,15 @@ export default function App() {
   useEffect(() => {
     initModel();
     loadProfile()
-      .then(setProfile)
+      .then((p) => {
+        if (p && (p.gh !== BACKBONE.gh || p.gw !== BACKBONE.gw || p.dim !== BACKBONE.dim)) {
+          // Enrolled with a different backbone: its memory bank is not comparable with the new features.
+          setNotice('The detection model was upgraded, so the saved profile no longer applies. Please re-enrol.');
+          setProfile(null);
+        } else {
+          setProfile(p);
+        }
+      })
       .catch((e) => console.warn('Could not load saved profile', e));
   }, [initModel]);
 
@@ -56,6 +66,7 @@ export default function App() {
         <EnrolScreen
           onCancel={home}
           onDone={(p) => {
+            setNotice(null);
             setProfile(p);
             setHistory([]);
             home();
@@ -102,6 +113,7 @@ export default function App() {
           }}
           onOpenResult={(r) => setScreen({ name: 'result', r })}
           onRetryModel={initModel}
+          notice={notice}
         />
       );
   }

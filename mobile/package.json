@@ -22,6 +22,9 @@
     "@types/jpeg-js": "^0.3.0",
     "@types/node": "^26.6.3",
     "@types/react": "~19.2.2",
+    "eslint": "^9.0.0",
+    "eslint-config-expo": "~57.0.2",
+    "patch-package": "^8.0.1",
     "tsx": "^4.23.15",
     "typescript": "~6.0.3"
   },
@@ -33,7 +36,9 @@
     "typecheck": "tsc --noEmit",
     "verify-core": "tsx scripts/verify-core.ts",
     "prebuild:android": "expo prebuild -p android",
-    "apk": "expo prebuild -p android && cd android && gradlew assembleRelease -PreactNativeArchitectures=arm64-v8a,x86_64"
+    "apk": "expo prebuild -p android && cd android && gradlew assembleRelease -PreactNativeArchitectures=arm64-v8a,x86_64",
+    "postinstall": "patch-package",
+    "lint": "expo lint"
   },
   "private": true,
   "expo": {

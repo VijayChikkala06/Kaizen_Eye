@@ -42,6 +42,14 @@ export interface Profile {
   globals?: Float32Array;
   gTau?: number;
   gLoo?: number[];
+  /** App: uri of a saved enrolment photo, shown as an alignment guide over the camera. */
+  refImage?: string;
+  /** Outer patch rows/columns ignored by the frame score (0 = spec). */
+  border?: number;
+  /** Frame score on the 3x3-smoothed distance map. */
+  smooth?: boolean;
+  /** Indices (into the photos the user took) of enrolment photos dropped as outliers. */
+  droppedFrames?: number[];
 }
 
 /** Minimum whole-image threshold, so near-identical enrolment frames do not make the check hair-trigger. */
@@ -55,6 +63,37 @@ export interface EnrolOptions {
   onProgress?: (stage: string, fraction: number) => void;
   /** Awaited now and then so the UI thread can render (pass undefined in Node / tests). */
   yieldFn?: () => Promise<void>;
+  /** Ignore the outer `border` patch rows/columns in frame scores (0 = spec). */
+  border?: number;
+  /** Drop enrolment frames whose LOO score is an outlier (median + 3 MAD, max 20%) and re-enrol without them. */
+  trimOutliers?: boolean;
+  /** Frame score on the 3x3-smoothed distance map (patchcore_ref smooth=True). */
+  smooth?: boolean;
+}
+
+/**
+ * Optional accelerated nearest-neighbour backend (e.g. a TFLite matmul model). Returns, for every patch of `feats`
+ * [P*dim], the squared distance to the nearest bank row whose bankFrame != skipFrame (-1 = use all rows).
+ */
+export type NNBackend = (
+  feats: Float32Array,
+  bank: Float32Array,
+  bankFrame: Int32Array,
+  dim: number,
+  skipFrame: number,
+) => Promise<Float32Array>;
+
+let nnBackend: NNBackend | null = null;
+export function setNNBackend(b: NNBackend | null): void {
+  nnBackend = b;
+}
+
+/** True when patch index p (row-major on a gh x gw grid) is inside the scored area. */
+function inside(p: number, gh: number, gw: number, border: number): boolean {
+  if (border <= 0) return true;
+  const r = Math.floor(p / gw);
+  const c = p % gw;
+  return r >= border && r < gh - border && c >= border && c < gw - border;
 }
 
 export interface ScoreResult {
@@ -128,25 +167,67 @@ export async function greedyCoreset(
   const sel = new Int32Array(k);
   sel[0] = start;
   const mind = new Float32Array(n);
+  // assign[i] = which selected centre (index into sel) is currently nearest to point i.
+  const assign = new Int32Array(n);
+  // cc[t] = distance from the newest centre to centre sel[t].
+  const cc = new Float64Array(k);
+  // prune[i] = 2 * sqrt(mind[i]) with a tiny safety margin (see the triangle-inequality test below).
+  const prune = new Float64Array(n);
   const s0 = start * dim;
-  for (let i = 0; i < n; i++) mind[i] = sqdistBounded(x, i * dim, x, s0, dim, Infinity);
+  for (let i = 0; i < n; i++) {
+    mind[i] = sqdistBounded(x, i * dim, x, s0, dim, Infinity);
+    prune[i] = 2 * Math.sqrt(mind[i]) * (1 + 1e-6) + 1e-12;
+  }
+  // Farthest point via per-block maxima: only blocks whose points changed are rescanned.
+  const B = 128;
+  const nb = Math.ceil(n / B);
+  const blockMax = new Float32Array(nb);
+  const blockArg = new Int32Array(nb);
+  const dirty = new Uint8Array(nb).fill(1);
   const maybeYield = makeYielder(yieldFn);
   for (let s = 1; s < k; s++) {
-    let j = 0;
-    let best = mind[0];
-    for (let i = 1; i < n; i++) {
-      if (mind[i] > best) {
-        best = mind[i];
-        j = i;
+    for (let b = 0; b < nb; b++) {
+      if (!dirty[b]) continue;
+      const lo = b * B;
+      const hi = Math.min(n, lo + B);
+      let bm = mind[lo];
+      let ba = lo;
+      for (let i = lo + 1; i < hi; i++) {
+        if (mind[i] > bm) {
+          bm = mind[i];
+          ba = i;
+        }
+      }
+      blockMax[b] = bm;
+      blockArg[b] = ba;
+      dirty[b] = 0;
+    }
+    // Strict '>' over blocks in order + lowest index inside each block = lowest index overall (np.argmax ties).
+    let j = blockArg[0];
+    let best = blockMax[0];
+    for (let b = 1; b < nb; b++) {
+      if (blockMax[b] > best) {
+        best = blockMax[b];
+        j = blockArg[b];
       }
     }
     sel[s] = j;
     const jo = j * dim;
+    for (let t = 0; t < s; t++) cc[t] = Math.sqrt(sqdistBounded(x, sel[t] * dim, x, jo, dim, Infinity));
     for (let i = 0; i < n; i++) {
+      // Exact pruning (triangle inequality): d(i, new) >= d(new, a_i) - d(i, a_i). If the new centre is at least
+      // twice as far from i's current centre a_i as i is, it cannot be closer to i - skip the distance entirely.
+      // The safety margin in prune[] keeps float rounding from ever skipping a genuine update.
+      if (cc[assign[i]] >= prune[i]) continue;
       const m = mind[i];
       if (m === 0) continue;
       const d = sqdistBounded(x, i * dim, x, jo, dim, m);
-      if (d < m) mind[i] = d;
+      if (d < m) {
+        mind[i] = d;
+        assign[i] = s;
+        prune[i] = 2 * Math.sqrt(mind[i]) * (1 + 1e-6) + 1e-12;
+        dirty[(i / B) | 0] = 1;
+      }
     }
     if ((s & 15) === 0) {
       onProgress?.(s / k);
@@ -224,8 +305,37 @@ function cosDist(g: Float32Array, globals: Float32Array, f: number, dim: number)
   return 1 - s;
 }
 
+/**
+ * Frame score (patchcore_ref.frame_score): max of the distance map - optionally 3x3-smoothed first (on the full
+ * map) - ignoring the outer `border` patch rows/columns.
+ */
+export function frameScore(dmap: Float32Array, gh: number, gw: number, smooth = false, border = 0): number {
+  const m = smooth ? smooth3(dmap, gh, gw) : dmap;
+  let best = -Infinity;
+  for (let p = 0; p < gh * gw; p++) if (inside(p, gh, gw, border) && m[p] > best) best = m[p];
+  return best;
+}
+
 export function bankSize(nPatches: number, ratio = 0.05, minK = 256): number {
   return Math.max(minK, Math.floor(ratio * nPatches));
+}
+
+/** Frames whose LOO score is far above the others: > median + 3 * MAD (scaled), at most 20% of the frames. */
+export function outlierFrames(loo: number[], maxFraction = 0.2): number[] {
+  const n = loo.length;
+  if (n < 6) return [];
+  const med = (v: number[]) => {
+    const s = [...v].sort((a, b) => a - b);
+    return s.length % 2 ? s[(s.length - 1) / 2] : (s[s.length / 2 - 1] + s[s.length / 2]) / 2;
+  };
+  const m = med(loo);
+  const mad = med(loo.map((v) => Math.abs(v - m))) * 1.4826 || 1e-9;
+  return loo
+    .map((v, i) => ({ v, i }))
+    .filter((o) => o.v > m + 3 * mad)
+    .sort((a, b) => b.v - a.v)
+    .slice(0, Math.floor(maxFraction * n))
+    .map((o) => o.i);
 }
 
 /** Build the memory bank + threshold from good frames (each [gh*gw*dim]). */
@@ -236,7 +346,23 @@ export async function enrol(
   dim: number,
   opts: EnrolOptions = {},
 ): Promise<Profile> {
-  const { ratio = 0.05, minK = 256, margin = 1.0, onProgress, yieldFn } = opts;
+  const prof = await enrolOnce(frames, gh, gw, dim, opts);
+  if (!opts.trimOutliers) return prof;
+  const drop = outlierFrames(prof.looScores);
+  if (!drop.length) return { ...prof, droppedFrames: [] };
+  const keep = frames.filter((_, i) => !drop.includes(i));
+  const trimmed = await enrolOnce(keep, gh, gw, dim, opts);
+  return { ...trimmed, droppedFrames: drop.sort((a, b) => a - b) };
+}
+
+async function enrolOnce(
+  frames: Float32Array[],
+  gh: number,
+  gw: number,
+  dim: number,
+  opts: EnrolOptions,
+): Promise<Profile> {
+  const { ratio = 0.05, minK = 256, margin = 1.0, onProgress, yieldFn, border = 0, smooth = false } = opts;
   const n = frames.length;
   if (n < 2) throw new Error('Need at least 2 good frames to enrol (leave-one-out calibration).');
   const per = gh * gw;
@@ -266,13 +392,31 @@ export async function enrol(
     for (let b = 0; b < kk; b++) if (bankFrame[b] !== f) { hasOther = true; break; }
     if (!hasOther) continue;
     const feats = frames[f];
-    let frameMaxSq = -1;
-    for (let p = 0; p < per; p++) {
-      const d = nnSq(feats, p * dim, bank, bankFrame, dim, f, frameMaxSq);
-      if (d > frameMaxSq) frameMaxSq = d;
-      if ((p & 63) === 0) await maybeYield();
+    if (nnBackend || smooth) {
+      // Full distance map (needed for smoothing; cheap with an accelerated backend).
+      const dm = new Float32Array(per);
+      if (nnBackend) {
+        const d2 = await nnBackend(feats, bank, bankFrame, dim, f);
+        for (let p = 0; p < per; p++) dm[p] = Math.sqrt(Math.max(0, d2[p]));
+        await maybeYield();
+      } else {
+        for (let p = 0; p < per; p++) {
+          dm[p] = Math.sqrt(nnSq(feats, p * dim, bank, bankFrame, dim, f, -1));
+          if ((p & 63) === 0) await maybeYield();
+        }
+      }
+      held.push(frameScore(dm, gh, gw, smooth, border));
+    } else {
+      // Spec path: only the max is needed, so prune each patch's search at the frame's running max.
+      let frameMaxSq = -1;
+      for (let p = 0; p < per; p++) {
+        if (!inside(p, gh, gw, border)) continue;
+        const d = nnSq(feats, p * dim, bank, bankFrame, dim, f, frameMaxSq);
+        if (d > frameMaxSq) frameMaxSq = d;
+        if ((p & 63) === 0) await maybeYield();
+      }
+      held.push(Math.sqrt(Math.max(0, frameMaxSq)));
     }
-    held.push(Math.sqrt(frameMaxSq));
   }
   onProgress?.('Calibrating threshold (leave-one-out)', 1);
   const tau = Math.max(...held) * margin;
@@ -303,6 +447,8 @@ export async function enrol(
     looScores: held,
     nFrames: n,
     createdAt: Date.now(),
+    border,
+    smooth,
   };
 }
 
@@ -316,18 +462,23 @@ export async function score(
   const { gh, gw, dim } = prof;
   const per = gh * gw;
   if (feat.length !== per * dim) throw new Error(`Feature map has ${feat.length} values, expected ${per * dim}`);
+  const border = prof.border ?? 0;
   const dmap = new Float32Array(per);
   const maybeYield = makeYielder(yieldFn);
-  let raw = 0;
-  for (let p = 0; p < per; p++) {
-    const d = Math.sqrt(nnSq(feat, p * dim, prof.bank, prof.bankFrame, dim, -1, -1));
-    dmap[p] = d;
-    if (d > raw) raw = d;
-    if ((p & 63) === 0) await maybeYield();
+  if (nnBackend) {
+    const d2 = await nnBackend(feat, prof.bank, prof.bankFrame, dim, -1);
+    for (let p = 0; p < per; p++) dmap[p] = Math.sqrt(Math.max(0, d2[p]));
+  } else {
+    for (let p = 0; p < per; p++) {
+      dmap[p] = Math.sqrt(nnSq(feat, p * dim, prof.bank, prof.bankFrame, dim, -1, -1));
+      if ((p & 63) === 0) await maybeYield();
+    }
   }
+  const raw = frameScore(dmap, gh, gw, prof.smooth ?? false, border);
   const sm = smooth3(dmap, gh, gw);
-  let pk = 0;
-  for (let i = 1; i < per; i++) if (sm[i] > sm[pk]) pk = i;
+  let pk = -1;
+  for (let i = 0; i < per; i++) if (inside(i, gh, gw, border) && (pk < 0 || sm[i] > sm[pk])) pk = i;
+  if (pk < 0) pk = 0;
 
   const patchScore = raw / (prof.tau * sensitivity);
   let globalScore = 0;

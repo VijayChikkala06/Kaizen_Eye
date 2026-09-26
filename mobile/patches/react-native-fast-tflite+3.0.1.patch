@@ -1,0 +1,190 @@
+diff --git a/node_modules/react-native-fast-tflite/cpp/HybridTfliteModel.cpp b/node_modules/react-native-fast-tflite/cpp/HybridTfliteModel.cpp
+index 1a7a3c4..9e118f4 100644
+--- a/node_modules/react-native-fast-tflite/cpp/HybridTfliteModel.cpp
++++ b/node_modules/react-native-fast-tflite/cpp/HybridTfliteModel.cpp
+@@ -17,22 +17,33 @@ namespace margelo::nitro::tflite {
+ 
+ HybridTfliteModel::HybridTfliteModel(TfLiteInterpreter* interpreter,
+                                      std::shared_ptr<ArrayBuffer> modelData,
+-                                     std::vector<TensorflowModelDelegate> delegates)
++                                     std::vector<TensorflowModelDelegate> delegates,
++                                     std::vector<TfLiteDelegate*> delegatePtrs)
+     : HybridObject(TAG), _interpreter(interpreter), _delegates(std::move(delegates)),
+-      _modelData(modelData) {
++      _delegatePtrs(std::move(delegatePtrs)), _modelData(modelData) {
+   TfLiteStatus status = TfLiteInterpreterAllocateTensors(_interpreter);
+   if (status != kTfLiteOk) {
++    release(); // the destructor does not run when the constructor throws
+     throw std::runtime_error(
+         "TFLite: Failed to allocate memory for input/output tensors! Status: " +
+         tfLiteStatusToString(status));
+   }
+ }
+ 
+-HybridTfliteModel::~HybridTfliteModel() {
++void HybridTfliteModel::release() {
+   if (_interpreter != nullptr) {
+     TfLiteInterpreterDelete(_interpreter);
+     _interpreter = nullptr;
+   }
++  // [kaizen-eye patch] delegates must outlive the interpreter, so free them afterwards
++  for (size_t i = 0; i < _delegatePtrs.size() && i < _delegates.size(); i++) {
++    deleteDelegate(_delegates[i], _delegatePtrs[i]);
++  }
++  _delegatePtrs.clear();
++}
++
++HybridTfliteModel::~HybridTfliteModel() {
++  release();
+   // _modelData (shared_ptr<ArrayBuffer>) is automatically freed
+ }
+ 
+diff --git a/node_modules/react-native-fast-tflite/cpp/HybridTfliteModel.hpp b/node_modules/react-native-fast-tflite/cpp/HybridTfliteModel.hpp
+index 8276520..4cb117a 100644
+--- a/node_modules/react-native-fast-tflite/cpp/HybridTfliteModel.hpp
++++ b/node_modules/react-native-fast-tflite/cpp/HybridTfliteModel.hpp
+@@ -18,7 +18,8 @@ namespace margelo::nitro::tflite {
+ class HybridTfliteModel : public HybridTfliteModelSpec {
+ public:
+   explicit HybridTfliteModel(TfLiteInterpreter* interpreter, std::shared_ptr<ArrayBuffer> modelData,
+-                             std::vector<TensorflowModelDelegate> delegates);
++                             std::vector<TensorflowModelDelegate> delegates,
++                             std::vector<TfLiteDelegate*> delegatePtrs);
+   ~HybridTfliteModel();
+ 
+   // Properties (from HybridTfliteModelSpec)
+@@ -37,10 +38,12 @@ private:
+   void invoke();
+   std::vector<std::shared_ptr<ArrayBuffer>> copyOutputBuffers();
+   std::shared_ptr<ArrayBuffer> getOutputBufferForTensor(const TfLiteTensor* tensor);
++  void release();
+ 
+ private:
+   TfLiteInterpreter* _interpreter = nullptr;
+   std::vector<TensorflowModelDelegate> _delegates;
++  std::vector<TfLiteDelegate*> _delegatePtrs; // owned, freed after the interpreter
+   std::shared_ptr<ArrayBuffer> _modelData;
+   std::unordered_map<std::string, std::shared_ptr<ArrayBuffer>> _outputBuffers;
+ };
+diff --git a/node_modules/react-native-fast-tflite/cpp/HybridTfliteModule.cpp b/node_modules/react-native-fast-tflite/cpp/HybridTfliteModule.cpp
+index 38c82d1..4df57ab 100644
+--- a/node_modules/react-native-fast-tflite/cpp/HybridTfliteModule.cpp
++++ b/node_modules/react-native-fast-tflite/cpp/HybridTfliteModule.cpp
+@@ -1,6 +1,9 @@
+ #include "HybridTfliteModule.hpp"
+ #include "TfliteHelpers.hpp"
+ 
++#include <algorithm>
++#include <thread>
++
+ #if defined(ANDROID)
+ #include <tflite/c/c_api.h>
+ #elif defined(__APPLE__)
+@@ -41,10 +44,17 @@ HybridTfliteModule::createModel(const std::shared_ptr<ArrayBuffer>& modelData,
+   // Configure interpreter via options
+   TfLiteInterpreterOptions* options = TfLiteInterpreterOptionsCreate();
+ 
++  // [kaizen-eye patch] Run the CPU kernels / XNNPACK on up to 4 threads. The interpreter default (-1) leaves the
++  // default XNNPACK delegate single-threaded.
++  const unsigned int cores = std::thread::hardware_concurrency();
++  TfLiteInterpreterOptionsSetNumThreads(options, cores == 0 ? 4 : static_cast<int32_t>(std::min(cores, 4u)));
++
+   // Add all hardware accelerated delegates (e.g. GPU, NPU, ...)
+   // if any. The default CPU delegate will always be available.
++  std::vector<TfLiteDelegate*> delegatePtrs;
+   for (const TensorflowModelDelegate& delegateType : delegates) {
+     TfLiteDelegate* delegate = getDelegate(delegateType);
++    delegatePtrs.push_back(delegate);
+     TfLiteInterpreterOptionsAddDelegate(options, delegate);
+   }
+ 
+@@ -57,11 +67,12 @@ HybridTfliteModule::createModel(const std::shared_ptr<ArrayBuffer>& modelData,
+   TfLiteModelDelete(model);
+ 
+   if (interpreter == nullptr) {
++    for (size_t i = 0; i < delegatePtrs.size(); i++) deleteDelegate(delegates[i], delegatePtrs[i]);
+     throw std::runtime_error("Failed to create TFLite interpreter!");
+   }
+ 
+   // Wrap in HybridTfliteModel — stores shared_ptr<ArrayBuffer> to keep model data bytes alive
+-  return std::make_shared<HybridTfliteModel>(interpreter, modelData, delegates);
++  return std::make_shared<HybridTfliteModel>(interpreter, modelData, delegates, delegatePtrs);
+ }
+ 
+ } // namespace margelo::nitro::tflite
+diff --git a/node_modules/react-native-fast-tflite/cpp/TfliteHelpers.cpp b/node_modules/react-native-fast-tflite/cpp/TfliteHelpers.cpp
+index 9f931f9..ad8026f 100644
+--- a/node_modules/react-native-fast-tflite/cpp/TfliteHelpers.cpp
++++ b/node_modules/react-native-fast-tflite/cpp/TfliteHelpers.cpp
+@@ -153,6 +153,12 @@ TfLiteDelegate* getMetalDelegate() {
+ TfLiteDelegate* getNNAPIDelegate() {
+ #ifdef ANDROID
+   TfLiteNnapiDelegateOptions delegateOptions = TfLiteNnapiDelegateOptionsDefault();
++  // [kaizen-eye patch] Most NPU / DSP NNAPI drivers only run float32 graphs if they may compute in fp16, and we
++  // want the lowest latency for one inference at a time. The app validates every accelerator's output against
++  // the CPU before using it. (use_burst_computation exists only in the C++ StatefulNnApiDelegate options, not in
++  // this C API; disallow_nnapi_cpu stays 1 so the slow nnapi-reference CPU driver is never used.)
++  delegateOptions.allow_fp16 = 1;
++  delegateOptions.execution_preference = TfLiteNnapiDelegateOptions::kFastSingleAnswer;
+   TfLiteDelegate* nnapiDelegate = TfLiteNnapiDelegateCreate(&delegateOptions);
+   return nnapiDelegate;
+ #else // ANDROID
+@@ -163,6 +169,10 @@ TfLiteDelegate* getNNAPIDelegate() {
+ TfLiteDelegate* getAndroidGPUDelegate() {
+ #ifdef ANDROID
+   TfLiteGpuDelegateOptionsV2 delegateOptions = TfLiteGpuDelegateOptionsV2Default();
++  // [kaizen-eye patch] Keep full fp32 precision (these are the library defaults, pinned on purpose): enrolment
++  // and inspection features must stay comparable even if the chosen accelerator changes between them.
++  delegateOptions.is_precision_loss_allowed = 0;
++  delegateOptions.inference_priority1 = TFLITE_GPU_INFERENCE_PRIORITY_MAX_PRECISION;
+   TfLiteDelegate* gpuDelegate = TfLiteGpuDelegateV2Create(&delegateOptions);
+   return gpuDelegate;
+ #else // ANDROID
+@@ -171,4 +181,28 @@ TfLiteDelegate* getAndroidGPUDelegate() {
+ #endif
+ }
+ 
++// [kaizen-eye patch] Delegates must outlive their interpreter and were never freed; the app creates and discards
++// NNAPI / GPU interpreters while benchmarking accelerators, so free each delegate after its interpreter.
++void deleteDelegate(TensorflowModelDelegate delegateType, TfLiteDelegate* delegate) {
++  if (delegate == nullptr)
++    return;
++  switch (delegateType) {
++#ifdef ANDROID
++    case TensorflowModelDelegate::NNAPI:
++      TfLiteNnapiDelegateDelete(delegate);
++      return;
++    case TensorflowModelDelegate::ANDROID_GPU:
++      TfLiteGpuDelegateV2Delete(delegate);
++      return;
++#endif
++#if defined(__APPLE__) && FAST_TFLITE_ENABLE_CORE_ML
++    case TensorflowModelDelegate::CORE_ML:
++      TfLiteCoreMlDelegateDelete(delegate);
++      return;
++#endif
++    default:
++      return;
++  }
++}
++
+ } // namespace margelo::nitro::tflite
+diff --git a/node_modules/react-native-fast-tflite/cpp/TfliteHelpers.hpp b/node_modules/react-native-fast-tflite/cpp/TfliteHelpers.hpp
+index c6458e5..26b1662 100644
+--- a/node_modules/react-native-fast-tflite/cpp/TfliteHelpers.hpp
++++ b/node_modules/react-native-fast-tflite/cpp/TfliteHelpers.hpp
+@@ -1,6 +1,7 @@
+ #pragma once
+ 
+ #include "TensorDataType.hpp"
++#include "TensorflowModelDelegate.hpp"
+ #include <string>
+ 
+ #if defined(ANDROID)
+@@ -22,5 +23,6 @@ TfLiteDelegate* getCoreMLDelegate();
+ TfLiteDelegate* getMetalDelegate();
+ TfLiteDelegate* getNNAPIDelegate();
+ TfLiteDelegate* getAndroidGPUDelegate();
++void deleteDelegate(TensorflowModelDelegate delegateType, TfLiteDelegate* delegate);
+ 
+ } // namespace margelo::nitro::tflite

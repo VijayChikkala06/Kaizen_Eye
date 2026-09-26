@@ -45,6 +45,26 @@ export async function loadProfile(): Promise<Profile | null> {
   };
 }
 
+const REF_PREFIX = 'kaizen_reference_';
+
+/**
+ * Keep a copy of one enrolment photo as the alignment "ghost" shown over the camera preview. A new file name per
+ * enrolment avoids stale image caching; older reference files are removed.
+ */
+export async function saveReferenceImage(uri: string): Promise<string> {
+  deleteReferenceImages();
+  const dest = new File(Paths.document, `${REF_PREFIX}${Date.now()}.jpg`);
+  await new File(uri).copy(dest);
+  return dest.uri;
+}
+
+function deleteReferenceImages(): void {
+  for (const item of Paths.document.list()) {
+    if (item instanceof File && item.name.startsWith(REF_PREFIX)) item.delete();
+  }
+}
+
 export function deleteProfile(): void {
   for (const f of [metaFile(), bankFile()]) if (f.exists) f.delete();
+  deleteReferenceImages();
 }

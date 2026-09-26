@@ -141,7 +141,13 @@ export function InspectScreen({
           <Button title="Inspect next part" onPress={() => setResult(null)} style={{ marginTop: 12 }} />
         </>
       ) : (
-        <CameraCapture onImages={inspect} busy={busy} multiple={false} captureLabel="Inspect part" />
+        <CameraCapture
+          onImages={inspect}
+          busy={busy}
+          multiple={false}
+          captureLabel="Inspect part"
+          ghostUri={profile.refImage}
+        />
       )}
     </ScrollView>
   );

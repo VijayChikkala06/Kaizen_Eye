@@ -22,6 +22,7 @@ export function HomeScreen({
   onDeleteProfile,
   onOpenResult,
   onRetryModel,
+  notice,
 }: {
   model: ModelState;
   profile: Profile | null;
@@ -33,6 +34,7 @@ export function HomeScreen({
   onDeleteProfile: () => void;
   onOpenResult: (r: Inspection) => void;
   onRetryModel: () => void;
+  notice?: string | null;
 }) {
   const ready = model.status === 'ready';
   const step = (d: number) =>
@@ -43,6 +45,11 @@ export function HomeScreen({
     <ScrollView style={ui.screen} contentContainerStyle={ui.scroll}>
       <Text style={ui.h1}>Kaizen Eye</Text>
       <Text style={ui.muted}>No-training visual inspection · learns “normal” from ~20 good photos</Text>
+      {notice ? (
+        <View style={[ui.card, { borderColor: colors.warn }]}>
+          <Text style={[ui.body, { color: colors.warn, fontWeight: '700' }]}>{notice}</Text>
+        </View>
+      ) : null}
 
       <View style={ui.card}>
         <View style={ui.between}>
@@ -119,7 +126,7 @@ export function HomeScreen({
         <Text style={ui.h2}>Sensitivity (margin)</Text>
         <Text style={[ui.muted, { marginTop: 4 }]}>
           Reject when score &gt; 1.0, where score = max patch distance ÷ (tau × margin). Higher margin = fewer false rejects;
-          lower = catches smaller defects. Start near 1.10.
+          lower = catches smaller defects. Start at 1.00.
         </Text>
         <View style={[ui.between, { marginTop: 10 }]}>
           <Button title="−" kind="secondary" onPress={() => step(-0.05)} style={{ width: 64 }} />

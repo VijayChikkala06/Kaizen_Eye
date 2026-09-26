@@ -40,6 +40,7 @@ def main():
     ap.add_argument("--ratio", type=float, default=0.05)
     ap.add_argument("--margin", type=float, default=1.0, help="sensitivity multiplier on tau (lower = stricter)")
     ap.add_argument("--out", default="out/eval")
+    ap.add_argument("--spec", action="store_true", help="README spec scoring (no smoothing, no border) instead of the app's")
     a = ap.parse_args()
     os.makedirs(a.out, exist_ok=True)
 
@@ -50,7 +51,10 @@ def main():
         raise SystemExit(f"need at least 5 good photos in {a.good}")
     enrol_paths, extra = good[: a.n_enrol], good[a.n_enrol:]
     imgs = [load_square(p, S) for p in enrol_paths]
-    prof = pc.enrol([emb(i) for i in imgs], ratio=a.ratio, folds=a.folds, margin=1.0)
+    feats = [emb(i) for i in imgs]
+    smooth, border = (False, 0) if a.spec else (pc.APP_SMOOTH, pc.app_border(feats[0].shape[0]))
+    prof = pc.enrol(feats, ratio=a.ratio, folds=a.folds, margin=1.0, smooth=smooth, border=border)
+    print(f"scoring: {'README spec' if a.spec else f'app settings (smoothing {smooth}, border {border} patches)'}")
     tau0 = prof.tau                                   # base threshold (margin 1.0)
     print(f"enrolled {len(imgs)} photos -> bank {prof.bank.shape}, base tau={tau0:.3f}  "
           f"(enrol held-out scores {min(prof.loo_scores):.2f}..{max(prof.loo_scores):.2f})")

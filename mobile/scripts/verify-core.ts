@@ -2,6 +2,7 @@
 /**
  * Checks the TypeScript scoring maths against the Python reference's golden vectors.
  *   npm run verify-core
+ * testdata/golden_core.json = README spec; testdata/golden_app.json = the app's settings (smoothing + border).
  * Pass criteria (README): coreset indices exactly, floats to ~1e-4 relative.
  */
 import { readFileSync } from 'fs';
@@ -10,7 +11,18 @@ import { resolve } from 'path';
 import { enrol, greedyCoreset, score } from '../src/core/patchcore';
 
 type Golden = {
-  params: { gh: number; gw: number; D: number; ratio: number; minK: number; folds: number; margin: number; start: number };
+  params: {
+    gh: number;
+    gw: number;
+    D: number;
+    ratio: number;
+    minK: number;
+    folds: number;
+    margin: number;
+    start: number;
+    smooth?: boolean;
+    border?: number;
+  };
   frames: number[][][][];
   coreset_indices: number[];
   loo_scores: number[];
@@ -21,23 +33,22 @@ type Golden = {
   normalised_score: number;
 };
 
-const path = resolve(__dirname, '../../testdata/golden_core.json');
-const g: Golden = JSON.parse(readFileSync(path, 'utf8').replace(/^﻿/, ''));
-const { gh, gw, D, ratio, minK, margin } = g.params;
 const flat = (f: number[][][]) => Float32Array.from(f.flat(2));
 
-let failures = 0;
-let maxRel = 0;
-function close(name: string, got: number, want: number, rel = 1e-4) {
-  const r = Math.abs(got - want) / Math.max(Math.abs(want), 1e-12);
-  maxRel = Math.max(maxRel, r);
-  if (r > rel) {
-    failures++;
-    console.log(`FAIL ${name}: got ${got}, want ${want} (rel ${r.toExponential(2)})`);
-  }
-}
+async function check(file: string): Promise<number> {
+  const g: Golden = JSON.parse(readFileSync(resolve(__dirname, '../../testdata', file), 'utf8').replace(/^﻿/, ''));
+  const { gh, gw, D, ratio, minK, margin, smooth = false, border = 0 } = g.params;
+  let failures = 0;
+  let maxRel = 0;
+  const close = (name: string, got: number, want: number, rel = 1e-4) => {
+    const r = Math.abs(got - want) / Math.max(Math.abs(want), 1e-12);
+    maxRel = Math.max(maxRel, r);
+    if (r > rel) {
+      failures++;
+      console.log(`  FAIL ${name}: got ${got}, want ${want} (rel ${r.toExponential(2)})`);
+    }
+  };
 
-async function main() {
   const frames = g.frames.map(flat);
   const x = new Float32Array(frames.length * gh * gw * D);
   frames.forEach((f, i) => x.set(f, i * f.length));
@@ -46,13 +57,13 @@ async function main() {
   const idxOk = JSON.stringify(sel) === JSON.stringify(g.coreset_indices);
   if (!idxOk) {
     failures++;
-    console.log('FAIL coreset_indices\n got ', sel.join(','), '\n want', g.coreset_indices.join(','));
+    console.log('  FAIL coreset_indices\n   got ', sel.join(','), '\n   want', g.coreset_indices.join(','));
   }
 
-  const prof = await enrol(frames, gh, gw, D, { ratio, minK, margin });
+  const prof = await enrol(frames, gh, gw, D, { ratio, minK, margin, smooth, border });
   if (prof.looScores.length !== g.loo_scores.length) {
     failures++;
-    console.log(`FAIL loo_scores length ${prof.looScores.length} vs ${g.loo_scores.length}`);
+    console.log(`  FAIL loo_scores length ${prof.looScores.length} vs ${g.loo_scores.length}`);
   }
   prof.looScores.forEach((v, i) => close(`loo_scores[${i}]`, v, g.loo_scores[i]));
   close('tau', prof.tau, g.tau);
@@ -63,14 +74,21 @@ async function main() {
   close('normalised_score', res.patchScore, g.normalised_score);
 
   console.log(
-    `coreset indices: ${idxOk ? 'EXACT MATCH' : 'MISMATCH'} (${sel.length})  |  max relative float error: ${maxRel.toExponential(2)}  |  ` +
-      `normalised_score ${res.patchScore.toFixed(6)} vs ${g.normalised_score.toFixed(6)}`,
+    `${file} (grid ${gh}x${gw}, smooth ${smooth}, border ${border}): coreset ${idxOk ? 'EXACT MATCH' : 'MISMATCH'} ` +
+      `(${sel.length}) | max rel error ${maxRel.toExponential(2)} | score ${res.patchScore.toFixed(6)} vs ` +
+      `${g.normalised_score.toFixed(6)} | ${failures ? `${failures} FAILED` : 'PASS'}`,
   );
+  return failures;
+}
+
+async function main() {
+  let failures = 0;
+  for (const file of ['golden_core.json', 'golden_app.json']) failures += await check(file);
   if (failures) {
     console.log(`${failures} check(s) FAILED`);
     process.exit(1);
   }
-  console.log('PASS - TypeScript core matches golden_core.json');
+  console.log('PASS - TypeScript core matches the Python reference (spec + app settings)');
 }
 
 main();

@@ -1,15 +1,17 @@
 import { useState } from 'react';
 import { Alert, ScrollView, Text, View } from 'react-native';
 
+import { borderFor, DETECTION } from '../config';
 import { enrol, type Profile } from '../core/patchcore';
 import { BACKBONE, embed } from '../ml/backbone';
 import { loadSquare } from '../ml/image';
-import { saveProfile } from '../storage/profileStore';
+import { saveProfile, saveReferenceImage } from '../storage/profileStore';
 import { Button, CameraCapture, ProgressBar, Thumb } from '../ui/components';
 import { colors, ui } from '../ui/theme';
 
 export const RECOMMENDED_FRAMES = 20;
 export const MIN_FRAMES = 5;
+export const MAX_FRAMES = 30;
 
 const nextFrame = () => new Promise<void>((r) => setTimeout(r, 0));
 
@@ -24,7 +26,13 @@ export function EnrolScreen({ onDone, onCancel }: { onDone: (p: Profile) => void
   const [progress, setProgress] = useState<{ stage: string; fraction: number } | null>(null);
   const [embedMs, setEmbedMs] = useState<number | null>(null);
 
-  const addImages = async (uris: string[]) => {
+  const addImages = async (picked: string[]) => {
+    const room = MAX_FRAMES - shots.length;
+    const uris = picked.slice(0, Math.max(0, room));
+    if (uris.length < picked.length) {
+      Alert.alert('Enough photos', `Up to ${MAX_FRAMES} good photos are used; ${picked.length - uris.length} were skipped.`);
+    }
+    if (!uris.length) return;
     setBusy(true);
     try {
       for (let i = 0; i < uris.length; i++) {
@@ -57,22 +65,40 @@ export function EnrolScreen({ onDone, onCancel }: { onDone: (p: Profile) => void
         BACKBONE.dim,
         {
           margin: 1.0, // the app stores margin 1.0 and applies the sensitivity at runtime
+          border: borderFor(BACKBONE.gh),
+          smooth: DETECTION.smooth,
+          trimOutliers: DETECTION.trimOutliers,
           onProgress: (stage, fraction) => setProgress({ stage, fraction }),
           yieldFn: nextFrame,
         },
       );
+      try {
+        prof.refImage = await saveReferenceImage(shots[0].uri);
+      } catch (e) {
+        console.warn('Could not save the alignment reference photo', e);
+      }
       saveProfile(prof);
       const secs = ((Date.now() - t0) / 1000).toFixed(1);
       const sorted = [...prof.looScores].sort((a, b) => a - b);
       const median = sorted[Math.floor(sorted.length / 2)];
       const worst = prof.looScores.indexOf(sorted[sorted.length - 1]);
-      const inconsistent = sorted[sorted.length - 1] > 1.5 * median;
+      const outlier = sorted[sorted.length - 1] > 1.5 * median;
+      const loose = prof.tau > DETECTION.tauWarning;
+      const dropped = prof.droppedFrames ?? [];
       Alert.alert(
-        inconsistent ? 'Profile ready - check your photos' : 'Profile ready',
-        `Learned "normal" from ${prof.nFrames} photos in ${secs} s.\nThreshold tau = ${prof.tau.toFixed(3)}` +
-          (inconsistent
-            ? `\n\nPhoto #${worst + 1} looks very different from the others, which makes the check lenient. ` +
-              'For best accuracy re-enrol with the part in the same place, same distance and a plain background.'
+        outlier || loose ? 'Profile ready - but check your photos' : 'Profile ready - consistent photos',
+        `Learned "normal" from ${prof.nFrames} photos in ${secs} s.\nThreshold tau = ${prof.tau.toFixed(3)} ` +
+          `(${loose ? `above ${DETECTION.tauWarning}: lenient` : 'good'})` +
+          (dropped.length
+            ? `\n\nIgnored ${dropped.length} photo(s) that did not match the rest: #${dropped.map((i) => i + 1).join(', #')}.`
+            : '') +
+          (loose
+            ? '\n\nYour good photos differ too much, so small defects may pass. Usual causes: other objects, hands or ' +
+              'cables entering the frame, a changing background, blur, or moving the phone. Use a plain surface, keep ' +
+              'only the part in view, hold still, then re-enrol.'
+            : '') +
+          (outlier && !loose
+            ? `\n\nPhoto #${worst + 1} looks different from the others; re-enrol without it for a tighter check.`
             : ''),
       );
       onDone(prof);
@@ -92,11 +118,20 @@ export function EnrolScreen({ onDone, onCancel }: { onDone: (p: Profile) => void
         <Button title="Cancel" kind="secondary" onPress={onCancel} disabled={busy} style={{ paddingVertical: 8 }} />
       </View>
       <Text style={[ui.muted, { marginTop: 6 }]}>
-        Photograph {RECOMMENDED_FRAMES} GOOD parts with the same mount, distance and light you will inspect with. Keep
-        the part inside the dashed square.
+        Photograph {RECOMMENDED_FRAMES} GOOD parts with the same mount, distance and light you will inspect with.
+        {'\n'}• Keep the whole part INSIDE the dashed square, with a little margin.
+        {'\n'}• Plain surface, and nothing else in view - no hands, cables or other objects.
+        {'\n'}• Hold still until the image is sharp; line every shot up with the faint alignment guide.
       </Text>
 
-      <CameraCapture onImages={addImages} busy={busy} multiple captureLabel="Capture good part" />
+      <CameraCapture
+        onImages={addImages}
+        busy={busy}
+        multiple
+        captureLabel={n >= MAX_FRAMES ? 'Enough photos' : 'Capture good part'}
+        ghostUri={shots[0]?.uri}
+        disabled={n >= MAX_FRAMES}
+      />
 
       <View style={ui.card}>
         <View style={ui.between}>

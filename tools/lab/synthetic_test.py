@@ -25,6 +25,7 @@ def main():
     ap.add_argument("--margin", type=float, default=1.0)
     ap.add_argument("--seed", type=int, default=0)
     ap.add_argument("--out", default="out/overlays")
+    ap.add_argument("--spec", action="store_true", help="README spec scoring (no smoothing, no border) instead of the app's")
     a = ap.parse_args()
     os.makedirs(a.out, exist_ok=True)
     rng = np.random.default_rng(a.seed)
@@ -36,7 +37,8 @@ def main():
     feats = [emb(im) for im in enrol_imgs]
     t_embed = (time.time() - t) / len(feats)
     t = time.time()
-    prof = pc.enrol(feats, margin=a.margin)
+    smooth, border = (False, 0) if a.spec else (pc.APP_SMOOTH, pc.app_border(feats[0].shape[0]))
+    prof = pc.enrol(feats, margin=a.margin, smooth=smooth, border=border)
     print(f"enrol: {len(feats)} frames -> bank {prof.bank.shape}, tau={prof.tau:.3f}, "
           f"LOO scores min/max = {min(prof.loo_scores):.3f}/{max(prof.loo_scores):.3f}  "
           f"(embed {t_embed*1000:.0f} ms/frame on this laptop CPU, coreset+LOO {time.time()-t:.1f} s)")
