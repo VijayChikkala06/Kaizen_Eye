@@ -63,7 +63,18 @@ export function EnrolScreen({ onDone, onCancel }: { onDone: (p: Profile) => void
       );
       saveProfile(prof);
       const secs = ((Date.now() - t0) / 1000).toFixed(1);
-      Alert.alert('Profile ready', `Learned "normal" from ${prof.nFrames} photos in ${secs} s.\nThreshold tau = ${prof.tau.toFixed(3)}`);
+      const sorted = [...prof.looScores].sort((a, b) => a - b);
+      const median = sorted[Math.floor(sorted.length / 2)];
+      const worst = prof.looScores.indexOf(sorted[sorted.length - 1]);
+      const inconsistent = sorted[sorted.length - 1] > 1.5 * median;
+      Alert.alert(
+        inconsistent ? 'Profile ready - check your photos' : 'Profile ready',
+        `Learned "normal" from ${prof.nFrames} photos in ${secs} s.\nThreshold tau = ${prof.tau.toFixed(3)}` +
+          (inconsistent
+            ? `\n\nPhoto #${worst + 1} looks very different from the others, which makes the check lenient. ` +
+              'For best accuracy re-enrol with the part in the same place, same distance and a plain background.'
+            : ''),
+      );
       onDone(prof);
     } catch (e) {
       Alert.alert('Enrolment failed', String(e));

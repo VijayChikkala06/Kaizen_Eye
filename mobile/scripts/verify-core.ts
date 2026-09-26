@@ -60,11 +60,11 @@ async function main() {
   const res = await score(flat(g.test_frame), prof, 1.0);
   g.patch_dist.flat().forEach((v, i) => close(`patch_dist[${i}]`, res.dmap[i], v));
   close('raw_score', res.raw, g.raw_score);
-  close('normalised_score', res.score, g.normalised_score);
+  close('normalised_score', res.patchScore, g.normalised_score);
 
   console.log(
     `coreset indices: ${idxOk ? 'EXACT MATCH' : 'MISMATCH'} (${sel.length})  |  max relative float error: ${maxRel.toExponential(2)}  |  ` +
-      `normalised_score ${res.score.toFixed(6)} vs ${g.normalised_score.toFixed(6)}`,
+      `normalised_score ${res.patchScore.toFixed(6)} vs ${g.normalised_score.toFixed(6)}`,
   );
   if (failures) {
     console.log(`${failures} check(s) FAILED`);

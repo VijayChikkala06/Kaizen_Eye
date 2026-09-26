@@ -6,11 +6,16 @@ import type { Profile } from '../core/patchcore';
 const metaFile = () => new File(Paths.document, 'kaizen_profile.json');
 const bankFile = () => new File(Paths.document, 'kaizen_profile_bank.bin');
 
-type Meta = Omit<Profile, 'bank' | 'bankFrame'> & { bankFrame: number[]; bankLength: number };
+type Meta = Omit<Profile, 'bank' | 'bankFrame' | 'globals'> & { bankFrame: number[]; bankLength: number; globals?: number[] };
 
 export function saveProfile(p: Profile): void {
-  const { bank, bankFrame, ...rest } = p;
-  const meta: Meta = { ...rest, bankFrame: Array.from(bankFrame), bankLength: bank.length };
+  const { bank, bankFrame, globals, ...rest } = p;
+  const meta: Meta = {
+    ...rest,
+    bankFrame: Array.from(bankFrame),
+    bankLength: bank.length,
+    globals: globals ? Array.from(globals) : undefined,
+  };
   const bf = bankFile();
   if (bf.exists) bf.delete();
   bf.create();
@@ -31,8 +36,13 @@ export async function loadProfile(): Promise<Profile | null> {
   copy.set(bytes);
   const bank = new Float32Array(copy.buffer);
   if (bank.length !== meta.bankLength) throw new Error('Saved profile is corrupt (bank size mismatch)');
-  const { bankFrame, bankLength: _len, ...rest } = meta;
-  return { ...rest, bank, bankFrame: Int32Array.from(bankFrame) };
+  const { bankFrame, bankLength: _len, globals, ...rest } = meta;
+  return {
+    ...rest,
+    bank,
+    bankFrame: Int32Array.from(bankFrame),
+    globals: globals ? Float32Array.from(globals) : undefined,
+  };
 }
 
 export function deleteProfile(): void {

@@ -14,6 +14,9 @@ export interface Inspection {
   dmap: Float32Array;
   raw: number;
   score: number;
+  patchScore: number;
+  globalScore: number;
+  reason: 'ok' | 'defect' | 'different';
   pass: boolean;
   threshold: number;
   sensitivity: number;
@@ -26,6 +29,12 @@ const nextFrame = () => new Promise<void>((r) => setTimeout(r, 0));
 
 export function ResultCard({ r, size }: { r: Inspection; size: number }) {
   const color = r.pass ? colors.pass : colors.reject;
+  const why =
+    r.reason === 'different'
+      ? 'Different part or scene - this photo does not match the enrolled good part.'
+      : r.reason === 'defect'
+        ? 'Local defect found - see the ring on the heat map.'
+        : 'Matches the enrolled good part.';
   return (
     <View style={[ui.card, { borderColor: color, borderWidth: 2 }]}>
       <View style={[ui.between, { marginBottom: 12 }]}>
@@ -35,6 +44,7 @@ export function ResultCard({ r, size }: { r: Inspection; size: number }) {
           <Text style={ui.muted}>score (reject &gt; 1.00)</Text>
         </View>
       </View>
+      <Text style={[ui.body, { color, fontWeight: '700', marginBottom: 12 }]}>{why}</Text>
       <HeatmapImage
         uri={r.uri}
         dmap={r.dmap}
@@ -43,9 +53,11 @@ export function ResultCard({ r, size }: { r: Inspection; size: number }) {
         threshold={r.threshold}
         size={size}
         peak={r.peak}
-        showPeak={!r.pass}
+        showPeak={r.reason === 'defect'}
       />
       <View style={[ui.row, { flexWrap: 'wrap', marginTop: 8 }]}>
+        <Stat label="defect score" value={r.patchScore.toFixed(2)} />
+        <Stat label="whole-image" value={r.globalScore.toFixed(2)} />
         <Stat label="max distance" value={r.raw.toFixed(3)} />
         <Stat label="threshold" value={r.threshold.toFixed(3)} />
         <Stat label="sensitivity" value={`×${r.sensitivity.toFixed(2)}`} />
@@ -94,6 +106,9 @@ export function InspectScreen({
         dmap: res.dmap,
         raw: res.raw,
         score: res.score,
+        patchScore: res.patchScore,
+        globalScore: res.globalScore,
+        reason: res.reason,
         pass: res.score <= 1.0,
         threshold: profile.tau * sensitivity,
         sensitivity,

@@ -31,6 +31,8 @@ export function base64ToBytes(b64: string): Uint8Array {
   return out.subarray(0, o);
 }
 
+const DISPLAY_SIZE = 1024;
+
 export interface SquareImage {
   /** Float32 RGB 0..255, NHWC [size*size*3] - the model input. */
   rgb: Float32Array;
@@ -50,13 +52,25 @@ export async function loadSquare(uri: string, size: number): Promise<SquareImage
     width: s,
     height: s,
   });
+  // Sharp copy for the screen (the model input itself is only 256 px).
   let cur = s;
-  while (cur / 2 >= size * 2) {
+  while (cur / 2 >= DISPLAY_SIZE) {
     cur = Math.floor(cur / 2);
     ctx.resize({ width: cur, height: cur });
   }
-  ctx.resize({ width: size, height: size });
-  const ref = await ctx.renderAsync();
+  const dispSize = Math.min(cur, DISPLAY_SIZE);
+  ctx.resize({ width: dispSize, height: dispSize });
+  const disp = await ctx.renderAsync();
+  const dispSaved = await disp.saveAsync({ format: SaveFormat.JPEG, compress: 0.9 });
+
+  const mctx = ImageManipulator.manipulate(disp);
+  cur = dispSize;
+  while (cur / 2 >= size * 1.5) {
+    cur = Math.floor(cur / 2);
+    mctx.resize({ width: cur, height: cur });
+  }
+  mctx.resize({ width: size, height: size });
+  const ref = await mctx.renderAsync();
   const saved = await ref.saveAsync({ format: SaveFormat.JPEG, compress: 1, base64: true });
   if (!saved.base64) throw new Error('Image manipulator returned no pixel data');
   const img = decodeJpeg(base64ToBytes(saved.base64), { useTArray: true, formatAsRGBA: false });
@@ -66,5 +80,5 @@ export async function loadSquare(uri: string, size: number): Promise<SquareImage
   const rgb = new Float32Array(size * size * 3);
   const px = img.data as Uint8Array;
   for (let i = 0; i < rgb.length; i++) rgb[i] = px[i];
-  return { rgb, uri: saved.uri, size };
+  return { rgb, uri: dispSaved.uri, size };
 }

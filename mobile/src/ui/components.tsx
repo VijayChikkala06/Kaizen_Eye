@@ -85,7 +85,7 @@ export function CameraCapture({
 
   const capture = async () => {
     if (!cam.current || busy) return;
-    const photo = await cam.current.takePictureAsync({ quality: 0.9 });
+    const photo = await cam.current.takePictureAsync({ quality: 1 });
     if (photo?.uri) onImages([photo.uri]);
   };
 
@@ -114,7 +114,13 @@ export function CameraCapture({
   } else {
     preview = (
       <>
-        <CameraView ref={cam} style={StyleSheet.absoluteFill} facing="back" onCameraReady={() => setReady(true)} />
+        <CameraView
+          ref={cam}
+          style={StyleSheet.absoluteFill}
+          facing="back"
+          autofocus="on"
+          onCameraReady={() => setReady(true)}
+        />
         <View pointerEvents="none" style={styles.guide} />
         {busy ? (
           <View style={styles.busyOverlay}>
@@ -171,8 +177,10 @@ export function HeatmapImage({
   const cells: React.ReactNode[] = [];
   for (let r = 0; r < gh; r++) {
     for (let c = 0; c < gw; c++) {
-      const a = Math.max(0, Math.min(1, dmap[r * gw + c] / (2 * threshold)));
-      const alpha = Math.max(0, Math.min(0.75, a * 2 - 0.5));
+      // Colour only patches near / above the reject threshold (rel = distance / threshold).
+      const rel = dmap[r * gw + c] / threshold;
+      const a = Math.max(0, Math.min(1, rel / 2));
+      const alpha = Math.max(0, Math.min(0.7, (rel - 0.75) * 1.4));
       if (alpha < 0.02) continue;
       const [R, G, B] = jet(a);
       cells.push(

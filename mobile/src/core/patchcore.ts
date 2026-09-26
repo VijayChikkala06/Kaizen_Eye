@@ -34,7 +34,18 @@ export interface Profile {
   looScores: number[];
   nFrames: number;
   createdAt: number;
+  /**
+   * Whole-image check (app extension, not in the Python spec): one L2-normalised mean feature vector per
+   * enrolment frame, [nFrames * dim], and its leave-one-out threshold (cosine distance). Catches "wrong part /
+   * wrong scene" photos whose individual patches all look familiar (e.g. a background texture seen at enrolment).
+   */
+  globals?: Float32Array;
+  gTau?: number;
+  gLoo?: number[];
 }
+
+/** Minimum whole-image threshold, so near-identical enrolment frames do not make the check hair-trigger. */
+export const MIN_GLOBAL_TAU = 0.02;
 
 export interface EnrolOptions {
   ratio?: number;
@@ -51,8 +62,14 @@ export interface ScoreResult {
   dmap: Float32Array;
   /** max(dmap) */
   raw: number;
-  /** raw / (tau * sensitivity);  > 1.0 = REJECT */
+  /** max(patchScore, globalScore);  > 1.0 = REJECT */
   score: number;
+  /** raw / (tau * sensitivity) - the PatchCore defect score (spec). */
+  patchScore: number;
+  /** whole-image cosine distance / (gTau * sensitivity); 0 when the profile has no globals. */
+  globalScore: number;
+  /** Which check decides the verdict. */
+  reason: 'ok' | 'defect' | 'different';
   /** Row / column of the (3x3 smoothed) hottest patch. */
   peak: { row: number; col: number };
 }
@@ -185,6 +202,28 @@ export function smooth3(m: Float32Array, h: number, w: number): Float32Array {
   return out;
 }
 
+/** L2-normalised mean of the patch vectors of one feature map [per * dim] -> [dim]. */
+export function globalDescriptor(feat: Float32Array, per: number, dim: number): Float32Array {
+  const g = new Float32Array(dim);
+  for (let p = 0; p < per; p++) {
+    const o = p * dim;
+    for (let t = 0; t < dim; t++) g[t] += feat[o + t];
+  }
+  let n = 0;
+  for (let t = 0; t < dim; t++) n += g[t] * g[t];
+  n = Math.sqrt(n) || 1;
+  for (let t = 0; t < dim; t++) g[t] /= n;
+  return g;
+}
+
+/** Cosine distance between unit vector g and row f of the globals matrix. */
+function cosDist(g: Float32Array, globals: Float32Array, f: number, dim: number): number {
+  let s = 0;
+  const o = f * dim;
+  for (let t = 0; t < dim; t++) s += g[t] * globals[o + t];
+  return 1 - s;
+}
+
 export function bankSize(nPatches: number, ratio = 0.05, minK = 256): number {
   return Math.max(minK, Math.floor(ratio * nPatches));
 }
@@ -237,7 +276,22 @@ export async function enrol(
   }
   onProgress?.('Calibrating threshold (leave-one-out)', 1);
   const tau = Math.max(...held) * margin;
+
+  // Whole-image descriptors + leave-one-out threshold (nearest OTHER enrolment frame).
+  const globals = new Float32Array(n * dim);
+  frames.forEach((f, i) => globals.set(globalDescriptor(f, per, dim), i * dim));
+  const gLoo: number[] = [];
+  for (let f = 0; f < n; f++) {
+    const g = globals.subarray(f * dim, f * dim + dim);
+    let best = Infinity;
+    for (let o = 0; o < n; o++) if (o !== f) best = Math.min(best, cosDist(g, globals, o, dim));
+    gLoo.push(best);
+  }
+  const gTau = Math.max(MIN_GLOBAL_TAU, Math.max(...gLoo) * margin);
   return {
+    globals,
+    gTau,
+    gLoo,
     version: 1,
     gh,
     gw,
@@ -274,10 +328,23 @@ export async function score(
   const sm = smooth3(dmap, gh, gw);
   let pk = 0;
   for (let i = 1; i < per; i++) if (sm[i] > sm[pk]) pk = i;
+
+  const patchScore = raw / (prof.tau * sensitivity);
+  let globalScore = 0;
+  if (prof.globals && prof.gTau) {
+    const g = globalDescriptor(feat, per, dim);
+    let best = Infinity;
+    for (let f = 0; f < prof.globals.length / dim; f++) best = Math.min(best, cosDist(g, prof.globals, f, dim));
+    globalScore = best / (prof.gTau * sensitivity);
+  }
+  const s = Math.max(patchScore, globalScore);
   return {
     dmap,
     raw,
-    score: raw / (prof.tau * sensitivity),
+    score: s,
+    patchScore,
+    globalScore,
+    reason: s <= 1.0 ? 'ok' : globalScore > patchScore ? 'different' : 'defect',
     peak: { row: Math.floor(pk / gw), col: pk % gw },
   };
 }
