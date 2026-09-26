@@ -1,0 +1,12 @@
+.gradle/
+build/
+local.properties
+.idea/
+__pycache__/
+.venv/
+venv/
+*.apk
+*.pt
+*.pth
+*.onnx
+.DS_Store
