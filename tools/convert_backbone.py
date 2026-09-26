@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""
+r"""
 Kaizen Eye - backbone converter.  NO TRAINING: takes a pretrained ImageNet CNN and turns it into a
 single-output "patch feature" model that runs on the phone through LiteRT.
 
@@ -12,22 +12,43 @@ PatchCore-style processing is baked into the graph, so the Android side only doe
   3. bilinear upsample to the first tap's grid, concatenate along channels
   4. optional fixed channel-group averaging (384 -> 128 ...). Fixed weights, nothing is learned.
 
+Converters (--backend, default auto = litert if litert-torch imports, else onnx2tf). Both outputs go through
+the same check against PyTorch:
+  litert   torch -> .tflite with litert-torch. Linux x86_64 / macOS arm64 (tools/requirements.txt).
+  onnx2tf  torch -> ONNX -> onnx2tf (TensorFlow CPU) -> float32 .tflite. Native Windows, in its own venv
+           (tools/requirements-convert-windows.txt), because litert-torch has no Windows wheels.
+
 Examples
   python tools/convert_backbone.py --backbone resnet18 --size 256 --dim 128 --out out/backbone_r18_256.tflite
   python tools/convert_backbone.py --backbone mobilenet_v3_small --size 320 --dim 56 --out out/backbone_mnv3_320.tflite
   python tools/convert_backbone.py --random-weights ...   # offline smoke test only (features are meaningless)
+  Windows:
+  .venv-convert\Scripts\python tools\convert_backbone.py --backend onnx2tf --backbone resnet18 --size 256 --dim 128 --out out\backbone_r18_256.tflite
 Add --onnx to also write a .onnx file (backup path: ONNX Runtime Mobile).
 """
 import argparse
 import collections
+import glob
+import importlib.util
 import json
 import os
+import shutil
+import subprocess
 import sys
+import sysconfig
+import tempfile
 
 import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+
+CONVERTER_HELP = r"""
+  Linux x86_64 / macOS arm64:  pip install -r tools/requirements.txt   (installs litert-torch)
+  Windows (litert-torch has no Windows wheels): use the separate onnx2tf venv. From the repo root:
+    py -3.11 -m venv .venv-convert
+    .venv-convert\Scripts\python -m pip install --no-deps -r tools\requirements-convert-windows.txt
+    .venv-convert\Scripts\python tools\convert_backbone.py --backend onnx2tf <same arguments>"""
 
 
 class PatchFeatureNet(nn.Module):
@@ -98,17 +119,72 @@ class PatchFeatureNet(nn.Module):
         return y.permute(0, 2, 3, 1)
 
 
+def pick_backend(choice):
+    """auto -> litert if litert-torch imports, else onnx2tf if installed. Exits with install hints otherwise."""
+    why = []
+    if choice in ("auto", "litert"):
+        try:
+            import litert_torch  # noqa: F401
+
+            return "litert"
+        except ImportError as e:
+            why.append(f"litert-torch: cannot import ({e})")
+    if choice in ("auto", "onnx2tf"):
+        if importlib.util.find_spec("onnx2tf") is not None:
+            return "onnx2tf"
+        why.append("onnx2tf: not installed")
+    raise SystemExit(f"--backend {choice}: no usable converter in {sys.executable}\n  " + "\n  ".join(why)
+                     + "\nFix:" + CONVERTER_HELP)
+
+
+def export_onnx(net, sample, path):
+    """NHWC in ("image") / NHWC out ("features"). Used by --onnx and by the onnx2tf backend."""
+    torch.onnx.export(net, (sample,), path, input_names=["image"], output_names=["features"], opset_version=17, dynamo=False)
+
+
+def convert_onnx2tf(net, sample, out):
+    """torch -> ONNX -> onnx2tf (TensorFlow CPU) -> float32 .tflite. onnx2tf runs as a child process in a temp dir."""
+    with tempfile.TemporaryDirectory(prefix="kaizen_onnx2tf_", ignore_cleanup_errors=True) as tmp:
+        src = os.path.join(tmp, "backbone.onnx")
+        export_onnx(net, sample, src)
+        # onnx2tf shells out to the `onnxsim` executable, which sits next to python.exe in the venv (Scripts\ on
+        # Windows) and is only on PATH when the venv is activated. Without it onnx2tf silently skips simplification.
+        env = dict(os.environ, PYTHONIOENCODING="utf-8")
+        env["PATH"] = os.pathsep.join([sysconfig.get_path("scripts"), os.path.dirname(sys.executable), env.get("PATH", "")])
+        if shutil.which("onnxsim", path=env["PATH"]) is None:
+            raise SystemExit("[onnx2tf] `onnxsim` executable not found - install tools/requirements-convert-windows.txt")
+        # onnx2tf loads this sample file from the current directory for an internal dummy inference and downloads it
+        # from GitHub when it is missing (slow, fails offline). The values never reach the model: write a local one.
+        np.save(os.path.join(tmp, "calibration_image_sample_data_20x128x128x3_float32.npy"),
+                np.random.default_rng(0).random((20, 128, 128, 3), dtype=np.float32))
+        # -kat: the graph input is already NHWC, so onnx2tf must keep its shape instead of transposing it
+        cmd = [sys.executable, "-m", "onnx2tf", "-i", src, "-o", os.path.join(tmp, "tf"), "-kat", "image"]
+        print("[onnx2tf] converting with TensorFlow (about a minute) ...", flush=True)
+        r = subprocess.run(cmd, cwd=tmp, env=env, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                           text=True, encoding="utf-8", errors="replace")
+        found = glob.glob(os.path.join(tmp, "tf", "*_float32.tflite"))
+        if r.returncode != 0 or len(found) != 1:
+            enc = sys.stdout.encoding or "utf-8"
+            print("\n".join(r.stdout.splitlines()[-40:]).encode(enc, "replace").decode(enc))
+            raise SystemExit(f"[onnx2tf] conversion failed (exit code {r.returncode}, {len(found)} float32 .tflite) - log tail above")
+        shutil.copyfile(found[0], out)
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--backbone", default="resnet18", choices=["resnet18", "mobilenet_v3_small"])
     ap.add_argument("--size", type=int, default=256, help="square input size, multiple of 32")
     ap.add_argument("--dim", type=int, default=128, help="output channels (0 = no reduction)")
     ap.add_argument("--out", default="out/backbone.tflite")
+    ap.add_argument("--backend", default="auto", choices=["auto", "litert", "onnx2tf"],
+                    help="litert = litert-torch (Linux/macOS), onnx2tf = torch->ONNX->TensorFlow (Windows), "
+                         "auto = litert if installed, else onnx2tf")
     ap.add_argument("--random-weights", action="store_true", help="skip ImageNet download (smoke test only)")
     ap.add_argument("--onnx", action="store_true", help="also export ONNX (backup runtime path)")
     a = ap.parse_args()
     if a.size % 32:
         raise SystemExit("--size must be a multiple of 32")
+    backend = pick_backend(a.backend)
 
     os.makedirs(os.path.dirname(os.path.abspath(a.out)), exist_ok=True)
     torch.manual_seed(0)
@@ -118,11 +194,14 @@ def main():
         ref = net(sample).numpy()
     print(f"[torch] output {ref.shape}  grid={net.grid}x{net.grid}  dim={net.dim}")
 
-    import litert_torch
+    if backend == "litert":
+        import litert_torch
 
-    edge = litert_torch.convert(net, (sample,))
-    edge.export(a.out)
-    print(f"[litert] wrote {a.out}  ({os.path.getsize(a.out) / 1e6:.1f} MB)")
+        edge = litert_torch.convert(net, (sample,))
+        edge.export(a.out)
+    else:
+        convert_onnx2tf(net, sample, a.out)
+    print(f"[{backend}] wrote {a.out}  ({os.path.getsize(a.out) / 1e6:.1f} MB)")
 
     from ai_edge_litert.interpreter import Interpreter
 
@@ -161,7 +240,7 @@ def main():
     if a.onnx:
         p = os.path.splitext(a.out)[0] + ".onnx"
         try:
-            torch.onnx.export(net, (sample,), p, input_names=["image"], output_names=["features"], opset_version=17, dynamo=False)
+            export_onnx(net, sample, p)
             import onnxruntime as ort
 
             s = ort.InferenceSession(p, providers=["CPUExecutionProvider"])

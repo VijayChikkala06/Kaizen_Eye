@@ -1,8 +1,8 @@
 """
 Kaizen Eye - reference implementation of the scoring maths (numpy, float32).
 
-This file is the SPEC for the Kotlin `:core` module. Every function here has a Kotlin twin, and
-`make_golden.py` writes test vectors so the Kotlin port can be checked number-for-number.
+This file is the SPEC for the TypeScript port in mobile/src/core/patchcore.ts, which mirrors these functions, and
+`make_golden.py` writes test vectors (testdata/golden_core.json) so the TypeScript port can be checked number-for-number.
 
 Pipeline (all training-free):
   enrol(frames)   frames = list of [gh, gw, D] feature maps of GOOD parts

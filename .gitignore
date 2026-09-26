@@ -1,20 +1,22 @@
-# === Android ===
-.gradle/
-local.properties
+# === Mobile (Expo) - mobile/.gitignore also ignores the generated android/ and ios/ folders ===
+node_modules/
+.expo/
 *.apk
+*.aab
 
 # === Python / Tools ===
 __pycache__/
 *.py[cod]
 *$py.class
 
-# Virtual environments
+# Virtual environments (.venv = tools, .venv-convert = Windows converter)
 .venv/
+.venv-*/
 env/
 venv/
 ENV/
 
-# Model outputs & checkpoints
+# Model outputs & checkpoints (the shipped model lives in mobile/assets/models/)
 out/
 dist/
 build/
@@ -24,7 +26,10 @@ build/
 *.onnx
 
 # Photos / local test datasets (large files)
-# photos/
+photos/
+
+# Local archives
+*.zip
 
 # === IDE and OS ===
 .vscode/

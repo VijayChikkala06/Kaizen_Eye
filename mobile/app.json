@@ -1,0 +1,51 @@
+{
+  "expo": {
+    "name": "Kaizen Eye",
+    "slug": "kaizen-eye",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.kaizeneye.app"
+    },
+    "android": {
+      "package": "com.kaizeneye.app",
+      "adaptiveIcon": {
+        "backgroundColor": "#E6F4FE",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundImage": "./assets/android-icon-background.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      },
+      "permissions": [
+        "android.permission.CAMERA"
+      ],
+      "blockedPermissions": [
+        "android.permission.RECORD_AUDIO"
+      ],
+      "predictiveBackGestureEnabled": false
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Kaizen Eye uses the camera to photograph parts for inspection.",
+          "recordAudioAndroid": false
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Kaizen Eye can import photos of parts from your gallery."
+        }
+      ],
+      "expo-build-properties",
+      "react-native-fast-tflite",
+      "expo-asset"
+    ]
+  }
+}

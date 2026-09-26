@@ -1,0 +1,14 @@
+{
+  "backbone": "resnet18",
+  "input_size": 256,
+  "grid_h": 32,
+  "grid_w": 32,
+  "dim": 128,
+  "input": "NHWC float32 RGB 0..255",
+  "output": "NHWC float32 [1,grid_h,grid_w,dim]",
+  "taps": [
+    8,
+    16
+  ],
+  "pretrained": true
+}

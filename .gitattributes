@@ -1,0 +1,11 @@
+# Normalise text line endings in the repo (the old starter-kit copies mixed CRLF and LF).
+* text=auto
+
+# Binary assets
+*.tflite binary
+*.onnx binary
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.webp binary
+*.zip binary
