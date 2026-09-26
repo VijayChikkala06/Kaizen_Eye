@@ -1,12 +1,34 @@
+# === Android ===
 .gradle/
-build/
 local.properties
-.idea/
-__pycache__/
-.venv/
-venv/
 *.apk
+
+# === Python / Tools ===
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environments
+.venv/
+env/
+venv/
+ENV/
+
+# Model outputs & checkpoints
+out/
+dist/
+build/
+*.egg-info/
 *.pt
 *.pth
 *.onnx
+
+# Photos / local test datasets (large files)
+# photos/
+
+# === IDE and OS ===
+.vscode/
+.idea/
 .DS_Store
+Thumbs.db
+*.log
