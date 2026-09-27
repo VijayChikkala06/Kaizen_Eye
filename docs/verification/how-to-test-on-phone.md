@@ -6,6 +6,17 @@ did not lock exposure, and drew a box on every speck of background texture; a pa
 for ½ s or crosses the dashed line, and nothing on screen said so. Now the background is learned only when you tap
 **LEARN SHEET** (then exposure, colour and focus are locked), specks are ignored, and a banner says what to do next.
 
+## 0a. What changed for accuracy (read once)
+- **Re-teach your parts.** This build tells look-alike parts apart much better (see `accuracy-v2.md`); Twins taught with
+  the old build show "built with another pipeline" on Home and cannot be used — Delete them and teach again.
+- The app now uses the **DINOv2** model (`dinov2_s14_448_fp16w.tflite`, pushed to `…/files/models/`) when it is on the phone,
+  else the old ResNet18. The Home chip says `CPU 127 ms` for DINOv2 — teaching takes ~10 s longer, judging ~0.25 s per part.
+- Parts are judged **rotation-normalised** (the part is turned so its long axis is horizontal, both ways round), so it
+  no longer matters how the part lies.
+- A new **look-alike gate** rejects a different object made of the same materials (a second black earbud case) as
+  **NOT THE PART**. Teach your second look-alike part as its own Twin and the two learn each other automatically; or use
+  **Negatives** (Home) to show a look-alike for 2 s each.
+
 ## 0. Install the latest build
 ```
 adb install -r native\dist\apk\KaizenEye2-phonefree-debug.apk
@@ -37,7 +48,9 @@ Turn the **notification volume up** and Do Not Disturb off; the reject beep uses
 4. Type a **Part name** → **START RECORDING**. For 12 s, slowly turn and shift the part in place (nudge it with a pen,
    or turn it and pull your hand away — frames with your hand in them are skipped). Keep it inside the picture.
    Watch "frames x/y usable": 40+ is good; below ~15 the teach fails ("Not enough sharp frames").
-5. Wait for **ARMED — <name>** (~5–15 s). If "Teach failed", read why and **TRY AGAIN**.
+5. Wait for **ARMED — <name>** (~10–25 s). Read the first line of the card: **Good teach** or **⚠ Weak teach** (few
+   usable frames — teach again with the part circled, fully in view, hands away, turning slowly). If "Teach failed", read
+   why and **TRY AGAIN**.
 
 ## 3. Inspect
 1. **INSPECT NOW** (or Home → **INSPECT**).
@@ -63,7 +76,8 @@ Turn the **notification volume up** and Do Not Disturb off; the reject beep uses
 - Several different good copies → PASS.
 - A different object → NOT THE PART.
 - A good copy with a marker dot / scratch → REJECT.
-- Good parts rejected? Move **Sensitivity** right (1.2–1.5×). Defects passing? Move it left.
+- Good parts rejected (red REJECT or violet NOT THE PART)? Move **Tolerance** to the right (1.2–1.5×; range 0.5–2.5×).
+  Defects or look-alikes passing? Move it left. (The look-alike gate follows the slider by its square root.)
 - Better "not the part": Home → **Negatives** → LEARN SHEET → hold 5–10 *different* wrong objects still, one by one
   → **DONE**.
 - Certificate: Home → **Calibrate** → LEARN SHEET → present ≥ 40 *distinct* good parts (not the taught one) →
@@ -78,6 +92,7 @@ Turn the **notification volume up** and Do Not Disturb off; the reject beep uses
 | "touches the edge" | part near the edge or your hand in view | move the part inward, hand out |
 | "too small" | part tiny in the picture | move the phone closer (part ≥ ~1/10 of the picture width) |
 | Nothing happens | phone moving, part not still, or hand still in view | stand; take the hand away; "held still" mode |
+| A different but similar part shows PASS | look-alike gate not learned it yet | teach that part as its own Twin (both Twins then know each other), or Home → **Negatives** and hold the look-alike still for 2 s each; then check the Home card: "look-alike gate … margin +…" |
 | Everything "NOT THE PART" | poor teach or different light | re-teach with a green box the whole time; re-learn sheet; add Negatives |
 | No beep | notification volume muted / Do Not Disturb | turn it up (vibration still works) |
 | Home chip says "model error — see Telemetry" | model/accelerator failed to load | Telemetry → **Accelerator** or **Re-benchmark all**; send the self-test |

@@ -38,7 +38,7 @@ class ReplayRegression(private val g: AppGraph, @Suppress("unused") private val 
         val teach = expected.getJSONObject("teach")
         val window = teach.getLong("startMs")..teach.getLong("endMs")
         // The laptop reference teaches from EVERY frame of the window (script.json) — sample every frame here too.
-        val tr = ClipJobs.teachFromClip(dir, eng, "selftest", seg, window, sheetFrames = expected.optInt("sheetFrames", 15), sampleEveryMs = 0L)
+        val tr = ClipJobs.teachFromClip(dir, eng, "selftest", seg, window, sheetFrames = expected.optInt("sheetFrames", 15), sampleEveryMs = 0L, accuracy = false)
         out.put("teach", tr.message)
         val twin = tr.built?.twin ?: return "FAIL teach from the synthetic clip: ${tr.message}"
         out.put("tau", twin.thresholds.tau).put("tauId", twin.thresholds.tauId).put("keyframes", twin.keyframeCount)

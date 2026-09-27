@@ -38,6 +38,13 @@ data class TwinJson(
 @Serializable
 data class NegativesJson(val count: Int, val similarities: List<Double>)
 
+/**
+ * `fit.json` (Fit.kt): only the same-part fits (teach leave-segment-out, calibration) and the factor are stored; the
+ * threshold is re-derived on load, and the negatives' fits are recomputed at run time (other Twins can come and go).
+ */
+@Serializable
+data class FitJson(val factor: Double, val pos: List<Double>, val cal: List<Double>)
+
 @Serializable
 data class ThresholdsJson(
     val tau: Double,
@@ -216,6 +223,7 @@ class TwinStore(val rootDir: File) {
         const val GLOBALS = "globals.f16"
         const val KF_FEATS = "kf_feats.f16"
         const val KF_COV = "kf_cov.f16"
+        const val FIT_JSON = "fit.json"
         const val NEGATIVES = "negatives.f16"
         const val KEYFRAMES_DIR = "keyframes"
         private const val TMP = ".tmp"
@@ -245,6 +253,10 @@ class TwinStore(val rootDir: File) {
             F16File.write(File(tmp, KF_FEATS), k, twin.patches * d, twin.kfFeats)
             F16File.write(File(tmp, KF_COV), k, twin.patches, twin.kfCov)
             F16File.write(File(tmp, NEGATIVES), twin.negativeCount, d, twin.negatives)
+            twin.thresholds.fit?.let { f ->
+                val fj = FitJson(FitParams().factor, f.pos.toList(), f.cal.toList())
+                File(tmp, FIT_JSON).writeText(TwinJsonCodec.json.encodeToString(FitJson.serializer(), fj), Charsets.UTF_8)
+            }
             val kfDir = File(tmp, KEYFRAMES_DIR).also { it.mkdirs() }
             if (keyframeJpegs != null) {
                 require(keyframeJpegs.size == k) { "need $k keyframe JPEGs, got ${keyframeJpegs.size}" }
@@ -392,9 +404,22 @@ class TwinStore(val rootDir: File) {
             positives = j.positives.toDoubleArray(),
             negativeSims = j.negatives.similarities.toDoubleArray(),
             negatives = negatives,
-            thresholds = TwinJsonCodec.thresholdsFromJson(j.thresholds),
+            thresholds = TwinJsonCodec.thresholdsFromJson(j.thresholds).copy(fit = readFit(dir)),
             certificate = j.certificate?.let(TwinJsonCodec::certificateFromJson),
         )
+    }
+
+    private fun readFit(dir: File): FitThreshold? {
+        val f = File(dir, FIT_JSON)
+        if (!f.isFile) return null
+        return try {
+            val j = TwinJsonCodec.json.decodeFromString(FitJson.serializer(), f.readText(Charsets.UTF_8))
+            FitThreshold.derive(j.pos.toDoubleArray(), DoubleArray(0), FitParams(j.factor), j.cal.toDoubleArray())
+        } catch (e: SerializationException) {
+            throw TwinFormatException("bad $FIT_JSON: ${e.message}", e)
+        } catch (e: IllegalArgumentException) {
+            throw TwinFormatException("bad $FIT_JSON: ${e.message}", e)
+        }
     }
 
     private fun readF16(dir: File, name: String, rows: Int, cols: Int): FloatArray {

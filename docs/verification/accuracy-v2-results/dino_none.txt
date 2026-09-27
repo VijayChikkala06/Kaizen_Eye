@@ -1,0 +1,26 @@
+backbone dino, rotation none, 5 augmented copies per keyframe
+
+=== enrolled A   LSO raw max 0.944 (median 0.506)   LSO fit max 0.580 (median 0.367)
+  raw: same part p50 1.000 p95 1.167 max 1.220 | vs B: min 0.797 med 0.903 AUROC 0.407 | vs C: min 1.098 med 1.139 AUROC 0.917
+  fit: same part p50 0.487 p95 0.544 max 0.598 | vs B: min 0.623 med 0.686 AUROC 1.000 | vs C: min 0.990 med 1.017 AUROC 1.000
+  shipped rules: tau_raw old 1.322 / new 1.086; tau_fit 0.638 (no negatives) / 0.615 (other twins as negatives)
+    same part  PASS: old score gate 100.0 %  | new score gate  82.5 %  | + fit gate  82.5 %  | + fit gate with negatives  82.5 %
+    other B    PASS: old score gate 100.0 %  | new score gate  91.2 %  | + fit gate   7.5 %  | + fit gate with negatives   0.0 %
+    other C    PASS: old score gate 100.0 %  | new score gate   0.0 %  | + fit gate   0.0 %  | + fit gate with negatives   0.0 %
+
+=== enrolled B   LSO raw max 0.594 (median 0.454)   LSO fit max 0.439 (median 0.335)
+  raw: same part p50 0.755 p95 1.023 max 1.095 | vs A: min 0.757 med 1.041 AUROC 0.897 | vs C: min 1.062 med 1.123 AUROC 0.998
+  fit: same part p50 0.486 p95 0.557 max 0.567 | vs A: min 0.606 med 0.679 AUROC 1.000 | vs C: min 0.934 med 0.964 AUROC 1.000
+  shipped rules: tau_raw old 0.832 / new 0.684; tau_fit 0.483 (no negatives) / 0.483 (other twins as negatives)
+    same part  PASS: old score gate  70.0 %  | new score gate  22.5 %  | + fit gate  13.8 %  | + fit gate with negatives  13.8 %
+    other A    PASS: old score gate  10.0 %  | new score gate   0.0 %  | + fit gate   0.0 %  | + fit gate with negatives   0.0 %
+    other C    PASS: old score gate   0.0 %  | new score gate   0.0 %  | + fit gate   0.0 %  | + fit gate with negatives   0.0 %
+
+=== enrolled C   LSO raw max 0.856 (median 0.488)   LSO fit max 0.575 (median 0.371)
+  raw: same part p50 0.760 p95 0.972 max 1.048 | vs A: min 1.137 med 1.181 AUROC 1.000 | vs B: min 1.122 med 1.165 AUROC 1.000
+  fit: same part p50 0.533 p95 0.601 max 0.619 | vs A: min 1.007 med 1.041 AUROC 1.000 | vs B: min 0.950 med 0.999 AUROC 1.000
+  shipped rules: tau_raw old 1.199 / new 0.985; tau_fit 0.632 (no negatives) / 0.632 (other twins as negatives)
+    same part  PASS: old score gate 100.0 %  | new score gate  95.0 %  | + fit gate  95.0 %  | + fit gate with negatives  95.0 %
+    other A    PASS: old score gate  62.5 %  | new score gate   0.0 %  | + fit gate   0.0 %  | + fit gate with negatives   0.0 %
+    other B    PASS: old score gate 100.0 %  | new score gate   0.0 %  | + fit gate   0.0 %  | + fit gate with negatives   0.0 %
+

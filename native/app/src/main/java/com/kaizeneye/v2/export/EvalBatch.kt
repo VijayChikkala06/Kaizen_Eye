@@ -31,7 +31,7 @@ class EvalBatch(private val g: AppGraph) {
         val exporter = EvalExport(g.dirs.exports.apply { mkdirs() }, cropSize = 448)
 
         progress("teach from ${teachClip.name}…")
-        val tr = ClipJobs.teachFromClip(teachClip, eng, "eval-${teachClip.nameWithoutExtension}", exporter = exporter, exportCropSize = exporter.cropSize)
+        val tr = ClipJobs.teachFromClip(teachClip, eng, "eval-${teachClip.nameWithoutExtension}", exporter = exporter, exportCropSize = exporter.cropSize, accuracy = false)
         var twin = tr.built?.twin ?: error("teach failed: ${tr.message}")
         val sheet = tr.sheet ?: error("no sheet in the teach clip")
 

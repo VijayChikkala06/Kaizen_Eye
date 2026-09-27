@@ -40,6 +40,8 @@ class ScoreResult(
     val gw: Int,
     val smoothed: DoubleArray,
     val dmap: DoubleArray,
+    /** FIT statistic (Fit.kt): mean of `d(p)` over the core (NaN when not computed). Not part of the spec. */
+    val fit: Double = Double.NaN,
 ) {
     /** `100 · anomalousFraction` (spec §6.4). */
     val areaPct: Double get() = 100.0 * anomalousFraction
@@ -173,7 +175,16 @@ object Scoring {
             gw = gw,
             smoothed = sm,
             dmap = d.copyOf(gh * gw),
+            fit = fit(d, sets),
         )
+    }
+
+    /** Mean of `d(p)` over the patch core (the FIT statistic); NaN if any core distance is NaN. */
+    fun fit(d: DoubleArray, sets: PatchSets): Double {
+        if (sets.coreIdx.isEmpty()) return Double.NaN
+        var sum = 0.0
+        for (p in sets.coreIdx) sum += d[p]
+        return sum / sets.coreIdx.size
     }
 
     /**

@@ -23,6 +23,12 @@ class NegativeEntry(
     val hasCrop: Boolean,
 )
 
+/**
+ * A negative's backbone feature map (`[patches · dim]`, binary16 values) with its patch coverage (`[patches]`): what the FIT gate
+ * needs to score the negative against any Twin's bank (one map per orientation of a canonical crop).
+ */
+class NegativeMap(val features: FloatArray, val cov: FloatArray)
+
 @Serializable
 private data class NegativeJson(
     val id: String,
@@ -97,6 +103,39 @@ class NegativesStore(val rootDir: File) {
 
     /** The globals of [fingerprint]'s negatives (input of teach / τ_id). */
     fun globals(fingerprint: String): List<FloatArray> = list(fingerprint).map { it.global }
+
+    /** Stores the feature maps of negative [id] (replacing older ones): `map_<i>.f16` `[patches, dim]` and `mapcov_<i>.f16` `[1, patches]`. */
+    fun addMaps(id: String, maps: List<NegativeMap>, patches: Int, dim: Int) {
+        require(ID_OK.matches(id)) { "bad negative id '$id'" }
+        val dir = File(rootDir, id)
+        require(dir.isDirectory) { "no such negative $id" }
+        dir.listFiles { f -> f.name.startsWith("map_") || f.name.startsWith("mapcov_") }?.forEach { it.delete() }
+        maps.forEachIndexed { i, m ->
+            require(m.features.size == patches * dim && m.cov.size == patches) { "map $i has the wrong size" }
+            F16File.write(File(dir, "map_$i.f16"), patches, dim, m.features)
+            F16File.write(File(dir, "mapcov_$i.f16"), 1, patches, m.cov)
+        }
+    }
+
+    /** The feature maps stored for negative [id] (empty when it has none). */
+    fun maps(id: String): List<NegativeMap> {
+        require(ID_OK.matches(id)) { "bad negative id '$id'" }
+        val dir = File(rootDir, id)
+        val out = ArrayList<NegativeMap>()
+        var i = 0
+        while (true) {
+            val f = File(dir, "map_$i.f16")
+            val c = File(dir, "mapcov_$i.f16")
+            if (!f.isFile || !c.isFile) break
+            try {
+                out += NegativeMap(F16File.read(f).data, F16File.read(c).data)
+            } catch (e: IOException) {
+                break
+            }
+            i++
+        }
+        return out
+    }
 
     /** The crop JPEG of negative [id], if it was stored. */
     fun crop(id: String): ByteArray? {

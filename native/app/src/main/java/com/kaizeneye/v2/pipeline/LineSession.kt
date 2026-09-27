@@ -30,6 +30,7 @@ import com.kaizeneye.core.track.Trigger
 import com.kaizeneye.core.track.TriggerConfig
 import com.kaizeneye.core.twin.CalibrationSample
 import com.kaizeneye.core.twin.CropInput
+import com.kaizeneye.core.twin.RotationRule
 import com.kaizeneye.core.twin.Judgement
 import com.kaizeneye.core.twin.TwinModel
 import com.kaizeneye.core.twin.VerdictEngine
@@ -92,6 +93,8 @@ class LineSession(
     private val dim = twin.dim
     private val n = twin.pipeline.inputSize
     private val factor = analysis.factor
+    /** Accuracy mode: pose-normalised crops (θ and θ + π). Off for the spec pipeline and for the eval export (axis-aligned crops). */
+    private val canonical = twin.pipeline.rotation == RotationRule.CANONICAL && exportCropSize == 0
     private val knn = KnnAdapter(engines.knn)
     private val badge = engines.backbone.report.badge
 
@@ -145,7 +148,12 @@ class LineSession(
         zone = null
     }
 
-    private class Mark(val state: OverlayState, val label: String, val heat: FloatArray?, val sq: com.kaizeneye.core.model.CropSquare?, val cxAtSnap: Double, val cyAtSnap: Double)
+    private class Mark(
+        val state: OverlayState, val label: String, val heat: FloatArray?, val sq: com.kaizeneye.core.model.CropSquare?,
+        val cxAtSnap: Double, val cyAtSnap: Double,
+        /** Angle (radians) the heat grid is rotated by about the square's centre (canonical crops), 0 for axis-aligned ones. */
+        val rot: Double = 0.0,
+    )
 
     private class Job(val fired: FiredTrigger, val snaps: List<CropSnapshot>, val arrivalNs: Long, val cxAtSnap: Double, val cyAtSnap: Double)
 
@@ -182,7 +190,7 @@ class LineSession(
         for (notice in upd.bestCrops) {
             notice.evictedFrameRef?.let { snapshots.remove(key(notice.trackId, it)) }
             val comp = componentOf(notice.trackId, upd.assignments, comps) ?: continue
-            snapshots[key(notice.trackId, notice.frameRef)] = analysis.snapshot(a, comp, n, gh, gw, null, exportCropSize)
+            snapshots[key(notice.trackId, notice.frameRef)] = analysis.snapshot(a, comp, n, gh, gw, null, exportCropSize, canonical)
         }
         for (fired in upd.triggers) {
             var snaps = fired.frames.mapNotNull { snapshots[key(fired.trackId, it.frameRef)] }
@@ -192,7 +200,7 @@ class LineSession(
                 snapshots[key(fired.trackId, first.frameRef)] == null
             ) {
                 // STEADY judges the firing (current) frame; snapshot it now if the best-crop buffer did not keep it.
-                componentOf(fired.trackId, upd.assignments, comps)?.let { snaps = listOf(analysis.snapshot(a, it, n, gh, gw, null, exportCropSize)) + snaps }
+                componentOf(fired.trackId, upd.assignments, comps)?.let { snaps = listOf(analysis.snapshot(a, it, n, gh, gw, null, exportCropSize, canonical)) + snaps }
             }
             marks[fired.trackId] = Mark(OverlayState.JUDGING, "judging…", null, null, 0.0, 0.0)
             pending.incrementAndGet()
@@ -242,7 +250,7 @@ class LineSession(
         cb(CircleResult(strokeId, true, "Got it — judging the circled part"))
         if (upd.triggers.any { it.trackId == trackId }) return // a trigger fired for it this very frame
         tr.markJudged(trackId)
-        val snap = analysis.snapshot(a, obj, n, gh, gw, null, exportCropSize)
+        val snap = analysis.snapshot(a, obj, n, gh, gw, null, exportCropSize, canonical)
         val fired = FiredTrigger(trackId, Trigger.STEADY, a.tMs, listOf(com.kaizeneye.core.track.BufferedFrame(a.index, 0.0, a.tMs)))
         marks[trackId] = Mark(OverlayState.JUDGING, "judging…", null, null, 0.0, 0.0)
         pending.incrementAndGet()
@@ -301,7 +309,7 @@ class LineSession(
                 // The heat map rides the track: shift the judged crop square by the track's motion since the snapshot.
                 val ox = (v.cx + dx - m.cxAtSnap) * factor
                 val oy = (v.cy + dy - m.cyAtSnap) * factor
-                HeatOverlay(gh, gw, m.heat, (m.sq.x0 + ox).toFloat(), (m.sq.y0 + oy).toFloat(), m.sq.side.toFloat())
+                HeatOverlay(gh, gw, m.heat, (m.sq.x0 + ox).toFloat(), (m.sq.y0 + oy).toFloat(), m.sq.side.toFloat(), m.rot.toFloat())
             } else null
             OverlayBox(
                 v.id,
@@ -389,9 +397,21 @@ class LineSession(
         val s0 = snaps.firstOrNull()
         var embedMs = Double.NaN
         var used = s0
+        val canon = s0?.canon
         var judgement: Judgement = when {
             s0 == null -> VerdictEngine.reframe(SanityReason.TOUCHES_BORDER, gh, gw)
             s0.sanity != SanityReason.OK -> VerdictEngine.reframe(s0.sanity, gh, gw)
+            canon != null && canonical -> {
+                val te = System.nanoTime()
+                val a = cropInput(s0.crop, s0.cov)
+                val b = cropInput(canon.altCrop, canon.altCov)
+                embedMs = (System.nanoTime() - te) / 1e6
+                stages.record("embed", embedMs)
+                val tj = System.nanoTime()
+                val j = twin.judgeCanonical(a, b, s0.geometry, s0.sanity, knn, sensitivity)
+                stages.record("knn+score", (System.nanoTime() - tj) / 1e6)
+                j
+            }
             else -> {
                 val te = System.nanoTime()
                 val f = engines.backbone.embed(s0.crop)
@@ -404,13 +424,23 @@ class LineSession(
             }
         }
         val firstLatency = (System.nanoTime() - job.arrivalNs) / 1e6
+        var orientation = judgement.orientation
         if (s0 != null && votingEnabled && VerdictEngine.needsVote(judgement) && snaps.size > 1) {
             val extras = snaps.drop(1).filter { it.sanity == SanityReason.OK }.take(2)
             if (extras.isNotEmpty()) {
-                val inputs = extras.map { CropInput(twin.pipeline.prepareFeatures(FeatureMap(gh, gw, dim, engines.backbone.embed(it.crop))), it.cov) }
-                val vote = twin.vote(judgement, inputs, knn, sensitivity)
-                judgement = vote.judgement
-                used = if (vote.chosen == 0) s0 else extras.getOrNull(vote.chosen - 1) ?: s0
+                if (canonical && extras.all { it.canon != null }) {
+                    val pairs = extras.map { cropInput(it.crop, it.cov) to cropInput(it.canon!!.altCrop, it.canon.altCov) }
+                    val vote = twin.voteCanonical(judgement, pairs, knn, sensitivity)
+                    judgement = vote.judgement
+                    used = if (vote.chosen == 0) s0 else extras.getOrNull(vote.chosen - 1) ?: s0
+                    // The voted crop's own orientation is not tracked; keep the first crop's (the heat map stays on the primary).
+                    if (vote.chosen != 0) orientation = 0
+                } else {
+                    val inputs = extras.map { CropInput(twin.pipeline.prepareFeatures(FeatureMap(gh, gw, dim, engines.backbone.embed(it.crop))), it.cov) }
+                    val vote = twin.vote(judgement, inputs, knn, sensitivity)
+                    judgement = vote.judgement
+                    used = if (vote.chosen == 0) s0 else extras.getOrNull(vote.chosen - 1) ?: s0
+                }
             }
         }
         // Latency claim = the first verdict (voting re-scores are excluded from the latency claim, plan).
@@ -428,18 +458,23 @@ class LineSession(
             Verdict.REFRAME -> "REFRAME"
         }
         val heat = judgement.smoothed?.let { sm -> heatValues(sm, judgement.tau * judgement.sensitivity) }
-        marks[job.fired.trackId] = Mark(stateOf(judgement.verdict), label, if (judgement.verdict == Verdict.DEFECT) heat else null, used?.square, job.cxAtSnap, job.cyAtSnap)
+        marks[job.fired.trackId] = Mark(
+            stateOf(judgement.verdict), label, if (judgement.verdict == Verdict.DEFECT) heat else null, used?.square, job.cxAtSnap, job.cyAtSnap,
+            rot = used?.canon?.angle(orientation) ?: 0.0,
+        )
 
         if (isReject) {
             rejectNo++
             if (live) g.alarm.reject(consecutiveRejects)
-            publishReject(judgement, used, rejectNo)
+            publishReject(judgement, used, rejectNo, orientation)
         }
         if (mode == LineMode.CALIBRATE) {
             val sane = judgement.verdict != Verdict.REFRAME
+            // The FIT gate is an identity-type gate: a good part it rejects counts with the identity rejections of the certificate.
             val sample = CalibrationSample(
-                sanityOk = sane, idOk = sane && judgement.identityOk, geoOk = sane && judgement.geometryOk,
+                sanityOk = sane, idOk = sane && judgement.identityOk && judgement.fitOk, geoOk = sane && judgement.geometryOk,
                 raw = if (sane) judgement.raw else null, sim = if (sane) judgement.sim else null, geometry = if (sane) used?.geometry else null,
+                fit = if (sane) judgement.fit.takeUnless { it.isNaN() } else null,
             )
             synchronized(calib) { calib += sample }
             if (sample.valid && live) g.alarm.tick()
@@ -451,6 +486,7 @@ class LineSession(
                 .put("s", judgement.s.jsonSafe()).put("raw", judgement.raw.jsonSafe()).put("tau", judgement.tau.jsonSafe())
                 .put("sensitivity", judgement.sensitivity.jsonSafe()).put("sim", judgement.sim.jsonSafe()).put("tauId", judgement.tauId.jsonSafe())
                 .put("areaPct", judgement.areaPct.jsonSafe()).put("peakRow", judgement.peakRow).put("peakCol", judgement.peakCol)
+                .put("fit", judgement.fit.jsonSafe()).put("tauFit", judgement.tauFit.jsonSafe()).put("orientation", orientation)
                 .put("geometryFailures", judgement.geometryFailures.joinToString()).put("votes", judgement.votes)
                 .put("latencyMs", firstLatency).put("embedMs", embedMs.jsonSafe()).put("judgeMs", (System.nanoTime() - judgeStart) / 1e6)
                 .put("accel", badge).put("queue", pending.get()),
@@ -471,7 +507,11 @@ class LineSession(
         if (v.isNaN() || tauEff <= 0) 0f else (((v / tauEff) - 0.6) / 0.6).coerceIn(0.0, 1.0).toFloat()
     }
 
-    private fun publishReject(j: Judgement, snap: CropSnapshot?, number: Int) {
+    /** Backbone features of one crop in pipeline space (DINOv2: patch-normalised). */
+    private fun cropInput(crop: ByteArray, cov: FloatArray): CropInput =
+        CropInput(twin.pipeline.prepareFeatures(FeatureMap(gh, gw, dim, engines.backbone.embed(crop))), cov)
+
+    private fun publishReject(j: Judgement, snap: CropSnapshot?, number: Int, orientation: Int = 0) {
         val facts = Facts(
             partName = twin.name, verdict = j.verdict, reason = j.reason,
             peakRow = j.peakRow.takeIf { it >= 0 }, peakCol = j.peakCol.takeIf { it >= 0 }, gh = gh, gw = gw,
@@ -480,7 +520,8 @@ class LineSession(
         )
         val cropFile = snap?.let {
             try {
-                Images.writeBoxedCrop(it.crop, it.n, max(0, j.peakRow), max(0, j.peakCol), gh, gw, File(g.dirs.vlmCache, "reject_%03d.jpg".format(number % 1000)))
+                val bytes = if (orientation == 1 && it.canon != null) it.canon.altCrop else it.crop
+                Images.writeBoxedCrop(bytes, it.n, max(0, j.peakRow), max(0, j.peakCol), gh, gw, File(g.dirs.vlmCache, "reject_%03d.jpg".format(number % 1000)))
             } catch (t: Throwable) {
                 null
             }

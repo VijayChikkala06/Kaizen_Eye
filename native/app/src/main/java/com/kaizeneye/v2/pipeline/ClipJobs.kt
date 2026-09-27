@@ -61,11 +61,13 @@ object ClipJobs {
         exportCropSize: Int = 448,
         /** Teach sampling period; 0 = every frame (the laptop reference for the self-test clip uses every frame). */
         sampleEveryMs: Long = 125L,
+        /** false = the spec pipeline (rotation NONE, no fit gate): the self-test regression compares with the laptop reference. */
+        accuracy: Boolean = true,
     ): TeachClipResult {
         val analysis = FrameAnalysis(seg, StageTimes())
         var frameW = 0
         var frameH = 0
-        val pipeline: PipelineInfo = TwinRepo.runningPipeline(eng, seg)
+        val pipeline: PipelineInfo = TwinRepo.runningPipeline(eng, seg, accuracy)
         var cap: SheetCapture? = SheetCapture(analysis, sheetFrames)
         var sheet: SheetModel? = null
         var session: TeachSession? = null

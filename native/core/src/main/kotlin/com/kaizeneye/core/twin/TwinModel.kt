@@ -46,6 +46,8 @@ data class Thresholds(
     /** Sensitivity slider (0.8–2.0× on τ), persisted per Twin. */
     val sensitivity: Double,
     val geometry: GeometryModel,
+    /** FIT gate (Fit.kt); null = the Twin has none (spec-only Twin). Stored in `fit.json`, not in twin.json. */
+    val fit: FitThreshold? = null,
 )
 
 /** Identity of a Twin: folder id, display name, creation time. */
@@ -213,8 +215,12 @@ class TwinModel(
         val crop = scoreCrop(features, cov, knn, sensitivity, scoreRule, bankRule, params)
             ?: return VerdictEngine.reframe(SanityReason.NO_CORE, gh, gw)
         val geo = thresholds.geometry.check(geometry)
-        return VerdictEngine.decide(crop.sim, thresholds.tauId, geo, crop.score, thresholds.coverageCut, crop.views)
+        return VerdictEngine.decide(crop.sim, thresholds.tauId, geo, crop.score, thresholds.coverageCut, crop.views, tauFitFor(sensitivity))
     }
+
+    /** Effective FIT gate for the slider position (NaN when the Twin has no fit gate). */
+    fun tauFitFor(sensitivity: Double = thresholds.sensitivity): Double =
+        thresholds.fit?.let { it.tauFit * FitThreshold.scale(sensitivity) } ?: Double.NaN
 
     /**
      * Rotation challenger CANONICAL (spec §6.5): the component was cropped at its principal angle θ and at θ + π
@@ -238,14 +244,22 @@ class TwinModel(
         requireNotNull(geometry) { "a sane presentation needs its geometry features" }
         val a = scoreCrop(atTheta.features, atTheta.cov, knn, sensitivity, scoreRule, bankRule, params)
         val b = scoreCrop(atThetaPlusPi.features, atThetaPlusPi.cov, knn, sensitivity, scoreRule, bankRule, params)
-        val crop = when {
+        // With a FIT gate the orientation that fits the taught part best is judged (a whole-crop statistic is more stable than the
+        // max-based raw); without one, the spec rule (lower raw, ties → θ).
+        val useFit = thresholds.fit != null && a != null && b != null && !a.score.fit.isNaN() && !b.score.fit.isNaN()
+        val second = when {
             a == null && b == null -> return VerdictEngine.reframe(SanityReason.NO_CORE, gh, gw)
-            a == null -> b!!
-            b == null -> a
-            else -> if (Scoring.lowerRaw(a.score, b.score) === b.score) b else a
+            a == null -> true
+            b == null -> false
+            useFit -> b.score.fit < a.score.fit
+            else -> Scoring.lowerRaw(a.score, b.score) === b.score
         }
+        val crop = if (second) b!! else a!!
         val geo = thresholds.geometry.check(geometry)
-        return VerdictEngine.decide(crop.sim, thresholds.tauId, geo, crop.score, thresholds.coverageCut, crop.views)
+        return VerdictEngine.decide(
+            crop.sim, thresholds.tauId, geo, crop.score, thresholds.coverageCut, crop.views, tauFitFor(sensitivity),
+            orientation = if (second) 1 else 0,
+        )
     }
 
     /**
@@ -268,6 +282,36 @@ class TwinModel(
         return VerdictEngine.vote(first, scores, thresholds.coverageCut, params.vote)
     }
 
+    /** FIT statistic of a crop against this Twin's bank (negatives / other Twins' keyframes); NaN when the crop has no core. */
+    fun fitOf(features: FeatureMap, cov: FloatArray, knn: KnnBackend = Knn.CPU): Double =
+        scoreCrop(features, cov, knn, 1.0, params = JudgeParams(fullDistanceMap = false))?.score?.fit ?: Double.NaN
+
+    /**
+     * CANONICAL variant of [vote]: every extra crop is scored at θ and θ + π and the orientation with the lower fit (raw when
+     * the Twin has no fit gate) is used.
+     */
+    fun voteCanonical(
+        first: Judgement,
+        extras: List<Pair<CropInput, CropInput>>,
+        knn: KnnBackend = Knn.CPU,
+        sensitivity: Double = first.sensitivity,
+        scoreRule: ScoreRule = pipeline.scoreRule,
+        bankRule: BankRule = pipeline.bankRule,
+        params: JudgeParams = JudgeParams(),
+    ): VoteOutcome {
+        val scores = extras.take(params.vote.maxExtra).map { (t, tp) ->
+            val a = scoreCrop(t.features, t.cov, knn, sensitivity, scoreRule, bankRule, params)?.score
+            val b = scoreCrop(tp.features, tp.cov, knn, sensitivity, scoreRule, bankRule, params)?.score
+            when {
+                a == null -> b
+                b == null -> a
+                thresholds.fit != null && !a.fit.isNaN() && !b.fit.isNaN() -> if (b.fit < a.fit) b else a
+                else -> if (Scoring.lowerRaw(a, b) === b) b else a
+            }
+        }
+        return VerdictEngine.vote(first, scores, thresholds.coverageCut, params.vote)
+    }
+
     /** Number of distinct segments that contain keyframes (`B_used`, spec §10.2). */
     val segmentsUsed: Int get() = keyframes.map { it.segment }.distinct().size
 
@@ -285,9 +329,14 @@ class TwinModel(
             thresholds.tauTeach, positives, negativeSims, thresholds.geometry, segmentsUsed, samples, params,
             latenciesMs, accelerator,
         )
+        // The FIT gate learns from the real good parts too (their fits join the same-part spread; negatives are kept).
+        val fit = thresholds.fit?.let { f ->
+            val cal = (f.cal.toList() + samples.filter { it.sanityOk }.mapNotNull { it.fit }).toDoubleArray()
+            FitThreshold.derive(f.pos, f.neg, FitParams(), cal)
+        }
         val th = thresholds.copy(
             tau = r.tauCal, calibrated = true, tauId = r.identity.tauId, tauIdRule = r.identity.rule,
-            identityMargin = r.identity.margin, geometry = r.geometry,
+            identityMargin = r.identity.margin, geometry = r.geometry, fit = fit,
         )
         return copy(thresholds = th, certificate = r.certificate) to r
     }
@@ -319,7 +368,16 @@ class TwinModel(
         )
     }
 
-    /** Copy with a new sensitivity (slider, 0.8–2.0× on τ). */
+    /**
+     * Copy with the fits of known DIFFERENT objects ([negativeFits]: other Twins' keyframes, the negatives library scored
+     * against this Twin's bank) and the fit threshold re-derived (midpoint rule). No-op for a Twin without a fit gate.
+     */
+    fun withFitNegatives(negativeFits: DoubleArray, params: FitParams = FitParams()): TwinModel {
+        val f = thresholds.fit ?: return this
+        return copy(thresholds = thresholds.copy(fit = FitThreshold.derive(f.pos, negativeFits, params, f.cal)))
+    }
+
+    /** Copy with a new sensitivity (slider, 0.5–2.5× on τ). */
     fun withSensitivity(sensitivity: Double): TwinModel = copy(thresholds = thresholds.copy(sensitivity = sensitivity))
 
     /** Copy with a new display name. */

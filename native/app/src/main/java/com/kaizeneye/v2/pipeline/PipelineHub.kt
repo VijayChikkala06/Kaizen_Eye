@@ -259,12 +259,44 @@ class PipelineHub(val g: AppGraph) {
         activeTwin = t.withSensitivity(g.prefs.sensitivity(t.id).toDouble())
         if (persist) g.prefs.activeTwinId = t.id
         _active.value = summary(t)
+        refreshFitNegatives()
+    }
+
+    private var fitJob: kotlinx.coroutines.Job? = null
+
+    /**
+     * Re-derives the active Twin's FIT gate against every known different object (other Twins, negatives library) in the
+     * background; the Twin used by the next Inspect start carries the result. Cheap: a few k-NN searches per other Twin.
+     */
+    fun refreshFitNegatives() {
+        val t = activeTwin ?: return
+        val eng = g.engines.ready() ?: return
+        if (t.thresholds.fit == null) return
+        fitJob?.cancel()
+        fitJob = g.scope.launch(Dispatchers.Default) {
+            try {
+                val r = FitNegatives.compute(t, repo, KnnAdapter(eng.knn))
+                val next = t.withFitNegatives(r.fits)
+                if (activeTwin?.id == t.id) {
+                    activeTwin = next
+                    _active.value = summary(next)
+                    _twins.value = _twins.value.map { if (it.id == next.id) summary(next) else it }
+                }
+                g.log.write("fit", JSONObject().put("twin", t.id).put("manual", r.manual).put("twins", r.twins).put("tauFit", next.thresholds.fit?.tauFit).put("rule", next.thresholds.fit?.rule).put("margin", next.thresholds.fit?.margin))
+            } catch (e: Throwable) {
+                Log.w(TAG, "fit negatives failed", e)
+            }
+        }
     }
 
     private fun summary(t: TwinModel): TwinSummary {
         val c = t.certificate
         val headline = if (c != null) CertificateText.lines(c).first() else t.withinPartLine()
-        return TwinSummary(t.id, t.name, t.createdAtMs, t.keyframeCount, t.thresholds.calibrated, t.thresholds.tau, t.thresholds.tauId, headline, true)
+        val fitLine = t.thresholds.fit?.let { f ->
+            String.format(Locale.ROOT, "look-alike gate %.3f (%s)%s", f.tauFit, f.rule,
+                f.margin?.let { m -> String.format(Locale.ROOT, ", %d known other objects, margin %+.3f", f.neg.size, m) } ?: ", no other object known yet")
+        }
+        return TwinSummary(t.id, t.name, t.createdAtMs, t.keyframeCount, t.thresholds.calibrated, t.thresholds.tau, t.thresholds.tauId, headline, true, null, fitLine)
     }
 
     fun selectTwin(id: String) {

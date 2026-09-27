@@ -116,3 +116,12 @@ audit PASS, all JVM tests green):
    dashed line", "keep it still"), a Re-learn sheet button, and on Teach a live box that turns green ("part ✓") only
    when the part is usable, with the reason otherwise.
 5. Headroom-only thermal level L2 is labelled "near the thermal limit (headroom x)", not "phone is hot".
+
+## Accuracy package v2 - look-alikes, circle-to-select, OOM (2026-09-27, ~05:00-07:10 IST)
+The other earbud case still PASSed after teaching one. Full analysis, numbers and limits: accuracy-v2.md.
+- Circle to select (Roi.kt, CircleLayer): the circled part is the only candidate (glare-split pieces merged), the ROI follows the part while teaching; on Inspect a circle judges that part at once, then restricts the view. Tests: RoiSelectTest.
+- Look-alike fix: DINOv2 + CANONICAL rotation + FIT gate + other Twins / Negatives as known wrong objects; score gate factor 1.4 -> 1.25.
+- Memory: largeHeap, at most 40 embedded teach frames, at most 24 keyframes. (User error: "Failed to allocate 50331664 byte allocation ... growth limit 268435456" = 32 DINOv2 keyframe maps.)
+- Slider renamed Tolerance, 0.5-2.5x. Weak teaches are called out on the Armed card.
+- Tests: core 171 -> 181 (FitGateTest, CanonicalCropTest, RealTwinFitTest skipped without data), app RoiSelectTest; goldens unchanged.
+- NOT verified on the phone: live canonical judging latency (telemetry stage snapshot), end-to-end look-alike rejection on live frames.

@@ -279,7 +279,7 @@ fun InspectOverlay(ui: InspectUi, modifier: Modifier = Modifier) {
         }
         for (box in ui.boxes) {
             val c = colorFor(box.state)
-            box.heat?.let { h -> drawHeat(m, h.gh, h.gw, h.values, h.x0, h.y0, h.side) }
+            box.heat?.let { h -> drawHeat(m, h.gh, h.gw, h.values, h.x0, h.y0, h.side, h.rot) }
             val r = m.mapRect(box.left, box.top, box.right, box.bottom)
             val stroke = when (box.state) {
                 OverlayState.DEFECT, OverlayState.NOT_ENROLLED -> 9f
@@ -300,14 +300,38 @@ fun InspectOverlay(ui: InspectUi, modifier: Modifier = Modifier) {
 }
 
 /** Heat cells (values 0..1) over the crop square; only the hot part (> 0.35) is tinted so the part stays visible. */
-private fun DrawScope.drawHeat(m: ViewMapper, gh: Int, gw: Int, v: FloatArray, x0: Float, y0: Float, side: Float) {
+private fun DrawScope.drawHeat(m: ViewMapper, gh: Int, gw: Int, v: FloatArray, x0: Float, y0: Float, side: Float, rot: Float = 0f) {
     val cw = side / gw
     val ch = side / gh
+    if (rot == 0f) {
+        for (r in 0 until gh) for (c in 0 until gw) {
+            val a = v[r * gw + c]
+            if (a <= 0.35f) continue
+            val rect = m.mapRect(x0 + c * cw, y0 + r * ch, x0 + (c + 1) * cw, y0 + (r + 1) * ch)
+            drawRect(Kz.Defect.copy(alpha = (0.15f + 0.5f * a).coerceAtMost(0.65f)), rect.topLeft, Size(rect.width + 0.5f, rect.height + 0.5f))
+        }
+        return
+    }
+    // Canonical crop: the grid is rotated by [rot] about the square's centre, so every cell is a rotated quad.
+    val cx = x0 + side / 2
+    val cy = y0 + side / 2
+    val cs = kotlin.math.cos(rot)
+    val sn = kotlin.math.sin(rot)
+    fun pt(a: Float, b: Float): Offset = m.map(cx + a * cs - b * sn, cy + a * sn + b * cs)
     for (r in 0 until gh) for (c in 0 until gw) {
         val a = v[r * gw + c]
         if (a <= 0.35f) continue
-        val rect = m.mapRect(x0 + c * cw, y0 + r * ch, x0 + (c + 1) * cw, y0 + (r + 1) * ch)
-        drawRect(Kz.Defect.copy(alpha = (0.15f + 0.5f * a).coerceAtMost(0.65f)), rect.topLeft, Size(rect.width + 0.5f, rect.height + 0.5f))
+        val l = c * cw - side / 2
+        val t = r * ch - side / 2
+        val path = androidx.compose.ui.graphics.Path().apply {
+            val p0 = pt(l, t)
+            moveTo(p0.x, p0.y)
+            val p1 = pt(l + cw, t); lineTo(p1.x, p1.y)
+            val p2 = pt(l + cw, t + ch); lineTo(p2.x, p2.y)
+            val p3 = pt(l, t + ch); lineTo(p3.x, p3.y)
+            close()
+        }
+        drawPath(path, Kz.Defect.copy(alpha = (0.15f + 0.5f * a).coerceAtMost(0.65f)))
     }
 }
 

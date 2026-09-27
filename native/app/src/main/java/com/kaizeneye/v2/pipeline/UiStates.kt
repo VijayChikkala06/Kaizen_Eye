@@ -25,6 +25,8 @@ data class TwinSummary(
     val headline: String,
     val loadable: Boolean,
     val problem: String? = null,
+    /** FIT gate (look-alike protection) status line, null for a Twin without one. */
+    val fitLine: String? = null,
 )
 
 sealed interface TeachUi {
@@ -46,7 +48,11 @@ sealed interface TeachUi {
 enum class OverlayState { TRACKING, JUDGING, PASS, DEFECT, NOT_ENROLLED, REFRAME }
 
 /** Heat map riding a track: [values] in 0..1 on the backbone grid, placed on the crop square (analysis px, sensor orientation). */
-class HeatOverlay(val gh: Int, val gw: Int, val values: FloatArray, val x0: Float, val y0: Float, val side: Float)
+class HeatOverlay(
+    val gh: Int, val gw: Int, val values: FloatArray, val x0: Float, val y0: Float, val side: Float,
+    /** Canonical crops: the heat grid is rotated by this angle (radians) about the centre of the (x0, y0, side) square. */
+    val rot: Float = 0f,
+)
 
 /** A box to draw, in ANALYSIS pixels (sensor orientation); the overlay rotates/scales it to the view. */
 data class OverlayBox(

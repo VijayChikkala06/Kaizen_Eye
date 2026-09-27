@@ -6,7 +6,9 @@ import com.kaizeneye.core.math.Stats
 import com.kaizeneye.core.model.FeatureMap
 import com.kaizeneye.core.model.SanityReason
 import com.kaizeneye.core.twin.CertificateText
+import com.kaizeneye.core.twin.FitParams
 import com.kaizeneye.core.twin.PipelineInfo
+import com.kaizeneye.core.twin.RotationRule
 import com.kaizeneye.core.twin.TeachBuilder
 import com.kaizeneye.core.twin.TeachFrame
 import com.kaizeneye.core.twin.TeachParams
@@ -79,10 +81,11 @@ class TeachSession(
         val pick = circle()?.pick(a0, seg)
         val a = pick?.analysed ?: a0
         lastView = LiveView.of(a, seg, pick)
-        val (sanity, snap) = if (pick != null) analysis.chosenSnapshot(a, pick.obj, pipeline.inputSize, pipeline.gh, pipeline.gw)
-        else analysis.mainSnapshot(a, pipeline.inputSize, pipeline.gh, pipeline.gw)
+        val canonical = pipeline.rotation == RotationRule.CANONICAL
+        val (sanity, snap) = if (pick != null) analysis.chosenSnapshot(a, pick.obj, pipeline.inputSize, pipeline.gh, pipeline.gw, canonical)
+        else analysis.mainSnapshot(a, pipeline.inputSize, pipeline.gh, pipeline.gw, canonical)
         lastSanity = sanity
-        captured += Captured(a.tMs, sanity, snap)
+        captured += Captured(a.tMs, sanity, snap?.withoutAlt())
         lastHint = if (pick != null && pick.obj == null) "Keep the part inside your circle" else hint(sanity, snap)
         return false
     }
@@ -135,11 +138,22 @@ class TeachSession(
         negatives: List<FloatArray>,
         progress: (String, Float) -> Unit,
     ): Result<Built> = runCatching {
-        val sane = captured.filter { it.snap != null }
+        // Memory: a DINOv2 feature map is 1.5 MB (ResNet18: 0.8 MB) and the crop 0.6 MB; the app heap is capped, so at most
+        // MAX_EMBED_FRAMES usable frames (evenly spread over the recording, so every time block stays represented) are
+        // embedded; the others are dropped (their crops are released at once).
+        val saneIdx = captured.indices.filter { captured[it].snap != null }
+        val chosen: Set<Int> = if (saneIdx.size <= MAX_EMBED_FRAMES) saneIdx.toSet()
+        else (0 until MAX_EMBED_FRAMES).map { j -> saneIdx[(j.toLong() * (saneIdx.size - 1) / (MAX_EMBED_FRAMES - 1)).toInt()] }.toSet()
+        val sane = saneIdx.filter { it in chosen }
         val frames = ArrayList<TeachFrame>(captured.size)
         var done = 0
-        for (c in captured) {
+        for ((ci, c) in captured.withIndex()) {
             val s = c.snap
+            if (s != null && ci !in chosen) {
+                captured[ci] = Captured(c.tMs, SanityReason.TOUCHES_BORDER, null)
+                frames += TeachFrame(c.tMs, SanityReason.TOUCHES_BORDER, Double.NaN, null, null, null)
+                continue
+            }
             if (s == null) {
                 frames += TeachFrame(c.tMs, c.sanity, Double.NaN, null, null, null)
                 continue
@@ -151,7 +165,7 @@ class TeachSession(
         }
         progress("keyframes, memory bank, leave-segment-out τ", 0.75f)
         val meta = TwinMeta.create(name)
-        val r = TeachBuilder.build(frames, pipeline, meta, TeachParams.forPipeline(pipeline).copy(threads = TEACH_THREADS), negatives, knn)
+        val r = TeachBuilder.build(frames, pipeline, meta, teachParams(pipeline), negatives, knn)
         when (r) {
             is TeachResult.Failure -> error(failureText(r))
             is TeachResult.Success -> {
@@ -162,12 +176,24 @@ class TeachSession(
                 }
                 val tw = r.twin
                 val th = tw.thresholds
+                val seen = captured.size
+                val usable = saneIdx.size
+                val weak = usable < MIN_GOOD_FRAMES || usable * 2 < seen || tw.segmentsUsed < 3
                 val lines = listOf(
+                    if (weak) {
+                        "⚠ Weak teach: only $usable of $seen frames were usable (${tw.segmentsUsed} time blocks). Teach again with the part " +
+                            "circled, fully in view, hands away, turning slowly — a stronger Twin judges better."
+                    } else {
+                        "Good teach: $usable of $seen frames usable over ${tw.segmentsUsed} time blocks."
+                    },
                     "keyframes ${tw.keyframeCount} from ${r.diagnostics.kept.size} sharp / ${r.diagnostics.accepted.size} usable frames",
                     "bank ${tw.bankRows} rows (coreset of ${r.diagnostics.pooledRows})",
                     String.format(Locale.ROOT, "τ %.3f (1.4 × max LSO over %d segments)", th.tau, r.diagnostics.segmentsUsed),
                     String.format(Locale.ROOT, "τ_id %.3f (%s)", th.tauId, th.tauIdRule),
                     tw.withinPartLine(),
+                    *(th.fit?.let { f ->
+                        arrayOf(String.format(Locale.ROOT, "look-alike gate %.3f (%.2f × the largest same-part fit %.3f)", f.tauFit, com.kaizeneye.core.twin.FitParams().factor, f.hi))
+                    } ?: emptyArray()),
                     "build ${r.diagnostics.timingsMs.values.sum().toInt()} ms",
                 )
                 Built(tw, r, jpegs, SystemClock.elapsedRealtime() - tapElapsedMs, lines)
@@ -193,6 +219,22 @@ class TeachSession(
 
     companion object {
         const val TARGET_VIEWS = 16
+        /** Fewer usable frames than this = a weak Twin (the Armed card says so). */
+        const val MIN_GOOD_FRAMES = 30
+        /** Most usable frames that are embedded and kept in memory while a Twin is built (see [build]). */
+        const val MAX_EMBED_FRAMES = 40
+        /**
+         * Accuracy mode (rotation CANONICAL): a tighter score gate (1.25 × the largest leave-segment-out score instead of the
+         * spec's 1.4 ×, which measured 1.7-2.5× the score of a look-alike on real captures) plus the FIT gate.
+         */
+        const val ACCURACY_TAU_FACTOR = 1.25
+        /** At most this many keyframes in accuracy mode (DINOv2 keyframe maps are 1.5 MB each; pose coverage is easier with canonical crops). */
+        const val ACCURACY_MAX_KEYFRAMES = 24
+
+        fun teachParams(pipeline: PipelineInfo): TeachParams {
+            val base = TeachParams.forPipeline(pipeline).copy(threads = TEACH_THREADS)
+            return if (pipeline.rotation == RotationRule.CANONICAL) base.copy(tauFactor = ACCURACY_TAU_FACTOR, fit = FitParams(), kMax = ACCURACY_MAX_KEYFRAMES) else base
+        }
         /** Parallel teach loops (results are identical for any thread count). */
         const val TEACH_THREADS = 4
         const val MIN_DURATION_MS = 6_000L

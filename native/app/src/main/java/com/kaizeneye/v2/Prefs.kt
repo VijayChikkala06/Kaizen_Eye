@@ -5,7 +5,7 @@ import com.kaizeneye.v2.camera.CameraPreset
 import org.json.JSONObject
 
 /** Small persisted settings (SharedPreferences). Per-Twin values are keyed by Twin id. */
-class Prefs(ctx: Context) {
+class Prefs(private val ctx: Context) {
     private val sp = ctx.getSharedPreferences("kaizen", Context.MODE_PRIVATE)
 
     var activeTwinId: String?
@@ -14,7 +14,7 @@ class Prefs(ctx: Context) {
 
     /** Sensitivity multiplier on τ (plan: slider 0.8–2.0×, persisted per Twin). */
     fun sensitivity(twinId: String): Float = sp.getFloat("sens_$twinId", 1.0f)
-    fun setSensitivity(twinId: String, v: Float) = sp.edit().putFloat("sens_$twinId", v.coerceIn(0.8f, 2.0f)).apply()
+    fun setSensitivity(twinId: String, v: Float) = sp.edit().putFloat("sens_$twinId", v.coerceIn(0.5f, 2.5f)).apply()
 
     /** Trigger: "LINE", "STEADY" or "BOTH". */
     var triggerMode: String
@@ -41,8 +41,18 @@ class Prefs(ctx: Context) {
 
     /** Backbone choice id ("r18" default, "dinov2" once its model is pushed). Changing it requires re-teaching / rebuilding Twins. */
     var backbone: String
-        get() = sp.getString("backbone", "r18") ?: "r18"
+        get() = sp.getString("backbone", null) ?: defaultBackbone()
         set(v) = sp.edit().putString("backbone", v).apply()
+
+    /**
+     * DINOv2 (much better at telling look-alike objects apart, docs/verification/accuracy-v2.md) when its model file has been
+     * pushed to the phone, else the bundled ResNet18. An explicit choice on the Readiness screen always wins.
+     */
+    private fun defaultBackbone(): String {
+        val dir = com.kaizeneye.runtime.ModelLocator.externalDir(ctx)
+        val dino = com.kaizeneye.v2.ml.Models.DINO_F16W.fileName
+        return if (dir != null && java.io.File(dir, dino).isFile) "dinov2" else "r18"
+    }
 
     var vlmAuto: Boolean
         get() = sp.getBoolean("vlmAuto", true)

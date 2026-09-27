@@ -30,6 +30,7 @@ object TemplateExplainer {
     private fun notEnrolled(f: Facts): String = when (f.reason?.lowercase(Locale.ROOT)) {
         "identity" -> "Not the enrolled part: it does not look like the taught ${f.partName}."
         "shape" -> "Not the enrolled part: its shape does not match the taught ${f.partName}."
+        "fit" -> "Not the enrolled part: overall it looks different from the taught ${f.partName} — a similar object, not this one."
         "coverage" -> "Not the enrolled part: most of its surface differs from the taught ${f.partName}" +
             (f.areaPct?.let { " (${Fmt.pct(it)} % of the part)" } ?: "") + "."
         else -> "Not the enrolled part."

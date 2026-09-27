@@ -130,8 +130,11 @@ fun InspectScreen(g: AppGraph, nav: Navigator, s: Screen.Inspect) {
                 }
             }
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text("Sensitivity ${"%.2f".format(ui.sensitivity)}×τ", color = Kz.TextDim, fontSize = 12.sp, modifier = Modifier.padding(end = 8.dp))
-                Slider(value = ui.sensitivity, onValueChange = { g.hub.setSensitivity(it) }, valueRange = 0.8f..2.0f, modifier = Modifier.weight(1f))
+                Column(Modifier.padding(end = 8.dp)) {
+                    Text("Tolerance ${"%.2f".format(ui.sensitivity)}×", color = Kz.TextDim, fontSize = 12.sp)
+                    Text("◀ stricter · forgiving ▶", color = Kz.TextDim, fontSize = 9.sp)
+                }
+                Slider(value = ui.sensitivity, onValueChange = { g.hub.setSensitivity(it) }, valueRange = 0.5f..2.5f, modifier = Modifier.weight(1f))
             }
             ui.reject?.let { RejectCardView(it, onExplain = { g.hub.explainLast() }) }
         }

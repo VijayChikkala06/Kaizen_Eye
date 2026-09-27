@@ -103,7 +103,7 @@ fun TeachScreen(g: AppGraph, nav: Navigator) {
                 is TeachUi.Armed -> {
                     Text("ARMED — ${t.twin.name}", color = Kz.Pass, fontWeight = FontWeight.Bold, fontSize = 18.sp)
                     Note("tap → armed in ${"%.1f".format(t.tapToArmedMs / 1000.0)} s (target ≤ 30 s)")
-                    t.lines.forEach { Text(it, color = Kz.Text, fontSize = 13.sp, fontFamily = Kz.Mono) }
+                    t.lines.forEach { Text(it, color = if (it.startsWith("⚠")) Kz.Warn else Kz.Text, fontSize = 13.sp, fontFamily = Kz.Mono) }
                     PrimaryButton("INSPECT NOW", Modifier.fillMaxWidth()) { nav.replace(Screen.Inspect(LineMode.INSPECT)) }
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         SecondaryButton("Add negatives", Modifier.weight(1f)) { nav.replace(Screen.Negatives) }

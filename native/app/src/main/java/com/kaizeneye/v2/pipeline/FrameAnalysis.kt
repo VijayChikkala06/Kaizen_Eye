@@ -15,6 +15,8 @@ import com.kaizeneye.core.model.SanityReason
 import com.kaizeneye.core.telemetry.StageTimes
 import com.kaizeneye.core.track.Detection
 import com.kaizeneye.core.track.Detections
+import com.kaizeneye.core.vision.CanonicalCrop
+import com.kaizeneye.core.vision.CanonicalSquare
 import com.kaizeneye.core.vision.CropMath
 import com.kaizeneye.core.vision.PatchCoverage
 import com.kaizeneye.v2.camera.CameraFrame
@@ -69,7 +71,25 @@ class CropSnapshot(
     val sharpness: Double,
     /** Eval-export capture (mask RLE + crop JPEG at the export crop size), only when requested. */
     val export: com.kaizeneye.v2.export.ExportFrame? = null,
-)
+    /**
+     * CANONICAL rotation (accuracy mode): [crop] / [cov] above are the crop at θ (principal axis horizontal) and this holds the
+     * crop at θ + π; [square] is then the canonical square (centre and side of the rotated crop, unrotated anchor). Null =
+     * plain axis-aligned crop (spec pipeline, eval export).
+     */
+    val canon: Canon? = null,
+) {
+    /** The same snapshot without the θ + π crop (teach frames only need θ; saves ~0.6 MB per frame with DINOv2). */
+    fun withoutAlt(): CropSnapshot = if (canon == null) this else CropSnapshot(
+        tMs, frameRef, n, crop, square, cov, geometry, theta, sanity, component, sharpness, export,
+        Canon(canon.square, ByteArray(0), FloatArray(0)),
+    )
+}
+
+/** The second orientation of a canonical crop and the geometry needed to draw its heat map. */
+class Canon(val square: CanonicalSquare, val altCrop: ByteArray, val altCov: FloatArray) {
+    /** Angle of the crop that was judged: 0 = θ, 1 = θ + π. */
+    fun angle(orientation: Int): Double = square.theta + if (orientation == 1) Math.PI else 0.0
+}
 
 /**
  * The fast loop's shared first half (plan "FAST LOOP"): RGBA frame → f×f box downscale → empty-sheet mask → morphology →
@@ -134,20 +154,48 @@ class FrameAnalysis(val params: MaskParams = MaskParams(), val stages: StageTime
      * Captures a [CropSnapshot] of component [c] from the current frame: crop-resize to n×n (rounded bytes, §1.4), patch
      * coverage on the gh×gw grid (§4), geometry (§2.7), sanity (§2.6 incl. NO_CORE).
      */
-    fun snapshot(a: Analysed, c: Component, n: Int, gh: Int, gw: Int, dst: ByteArray? = null, exportCropSize: Int = 0): CropSnapshot {
+    fun snapshot(
+        a: Analysed, c: Component, n: Int, gh: Int, gw: Int, dst: ByteArray? = null, exportCropSize: Int = 0,
+        canonical: Boolean = false,
+    ): CropSnapshot {
         val t0 = System.nanoTime()
+        val geo = Geometry.features(a.labels, a.w, a.h, c)
+        val theta = Geometry.principalAngle(a.labels, a.w, a.h, c)
+        if (canonical && exportCropSize == 0) return canonicalSnapshot(a, c, n, gh, gw, dst, geo, theta, t0)
         val sq = CropMath.square(c, factor, a.fullW, a.fullH, params.cropMargin)
         val crop = dst ?: ByteArray(n * n * 3)
         ImageOps.cropResize(a.rgba, sq.x0, sq.y0, sq.side, n, crop)
         val cov = PatchCoverage.coverage(a.labels, a.w, a.h, c.label, sq, factor, gh, gw)
-        val geo = Geometry.features(a.labels, a.w, a.h, c)
-        val theta = Geometry.principalAngle(a.labels, a.w, a.h, c)
         var sanity = Sanity.check(c, a.components, a.w, a.h, params, a.fullW, a.fullH)
         if (sanity == SanityReason.OK && PatchCoverage.sets(cov, gh, gw, params.coreThreshold).isCoreEmpty) sanity = SanityReason.NO_CORE
         val sharp = Detections.sharpness(a.grey, a.w, a.h, c)
         stages?.record("snapshot", (System.nanoTime() - t0) / 1e6)
         val export = if (exportCropSize > 0) exportOf(a, c, sanity, sq, cov, geo, theta, crop, n, exportCropSize) else null
         return CropSnapshot(a.tMs, a.index, n, crop, sq, cov, geo, theta, sanity, c, sharp, export)
+    }
+
+    /**
+     * CANONICAL snapshot (accuracy mode): the crop is rotated so the part's principal axis is horizontal, at θ and at θ + π,
+     * with the square fitted to the part's rotated extent (CanonicalCrop). Patch coverage follows the rotation. Sanity is the
+     * same §2.6 check as the plain crop (it looks at components, not at the crop).
+     */
+    private fun canonicalSnapshot(
+        a: Analysed, c: Component, n: Int, gh: Int, gw: Int, dst: ByteArray?, geo: GeometryFeatures, theta: Double, t0: Long,
+    ): CropSnapshot {
+        val sq = CanonicalCrop.square(a.labels, a.w, a.h, c, theta, factor, params.cropMargin)
+        val crop = dst ?: ByteArray(n * n * 3)
+        ImageOps.cropResizeRotated(a.rgba, sq.cx, sq.cy, sq.side, theta, n, crop)
+        val cov = CanonicalCrop.coverage(a.labels, a.w, a.h, c.label, sq, theta, factor, gh, gw)
+        val alt = ByteArray(n * n * 3)
+        ImageOps.cropResizeRotated(a.rgba, sq.cx, sq.cy, sq.side, theta + Math.PI, n, alt)
+        val altCov = CanonicalCrop.coverage(a.labels, a.w, a.h, c.label, sq, theta + Math.PI, factor, gh, gw)
+        var sanity = Sanity.check(c, a.components, a.w, a.h, params, a.fullW, a.fullH)
+        val sets = PatchCoverage.sets(cov, gh, gw, params.coreThreshold)
+        val altSets = PatchCoverage.sets(altCov, gh, gw, params.coreThreshold)
+        if (sanity == SanityReason.OK && (sets.isCoreEmpty || altSets.isCoreEmpty)) sanity = SanityReason.NO_CORE
+        val sharp = Detections.sharpness(a.grey, a.w, a.h, c)
+        stages?.record("snapshot", (System.nanoTime() - t0) / 1e6)
+        return CropSnapshot(a.tMs, a.index, n, crop, sq.asCropSquare, cov, geo, theta, sanity, c, sharp, null, Canon(sq, alt, altCov))
     }
 
     private fun exportOf(
@@ -176,18 +224,18 @@ class FrameAnalysis(val params: MaskParams = MaskParams(), val stages: StageTime
      * Single-object snapshot of an explicitly [chosen] component (the circled part) instead of the §2.5 main object:
      * §2.6 sanity against the frame's other components, then the snapshot. Null crop when not sane.
      */
-    fun chosenSnapshot(a: Analysed, chosen: Component?, n: Int, gh: Int, gw: Int): Pair<SanityReason, CropSnapshot?> {
+    fun chosenSnapshot(a: Analysed, chosen: Component?, n: Int, gh: Int, gw: Int, canonical: Boolean = false): Pair<SanityReason, CropSnapshot?> {
         val sanity = Sanity.check(chosen, a.components, a.w, a.h, params, a.fullW, a.fullH)
         if (chosen == null || sanity != SanityReason.OK) return sanity to null
-        val s = snapshot(a, chosen, n, gh, gw)
+        val s = snapshot(a, chosen, n, gh, gw, canonical = canonical)
         return s.sanity to (if (s.sanity == SanityReason.OK) s else null)
     }
 
     /** Snapshot for single-object modes (teach, steady hold): §2.5 main object + §2.6 sanity. Null crop when not sane. */
-    fun mainSnapshot(a: Analysed, n: Int, gh: Int, gw: Int): Pair<SanityReason, CropSnapshot?> {
+    fun mainSnapshot(a: Analysed, n: Int, gh: Int, gw: Int, canonical: Boolean = false): Pair<SanityReason, CropSnapshot?> {
         val (main, sanity) = Sanity.checkMain(a.components, a.w, a.h, params)
         if (main == null || sanity != SanityReason.OK) return sanity to null
-        val s = snapshot(a, main, n, gh, gw)
+        val s = snapshot(a, main, n, gh, gw, canonical = canonical)
         return s.sanity to (if (s.sanity == SanityReason.OK) s else null)
     }
 }

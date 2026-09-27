@@ -24,6 +24,8 @@ data class CalibrationSample(
     val raw: Double?,
     val sim: Double?,
     val geometry: GeometryFeatures?,
+    /** FIT statistic of the presentation (Fit.kt), null when not computed. */
+    val fit: Double? = null,
 ) {
     /** Valid = all three gates pass (spec §10.1). */
     val valid: Boolean get() = sanityOk && idOk && geoOk

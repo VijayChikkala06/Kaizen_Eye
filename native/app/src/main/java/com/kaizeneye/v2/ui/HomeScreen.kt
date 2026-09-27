@@ -60,8 +60,9 @@ fun HomeScreen(g: AppGraph, nav: Navigator) {
         if (a != null) {
             Card(border = Kz.Accent) {
                 Text(a.name, fontSize = 20.sp, fontWeight = FontWeight.SemiBold, color = Kz.Text)
-                Note("taught ${fmt(a.createdAtMs)} · ${a.keyframes} keyframes · τ ${"%.3f".format(a.tau)} · τ_id ${"%.3f".format(a.tauId)}")
+                Note("taught ${fmt(a.createdAtMs)} · ${a.keyframes} keyframes" + if (a.tau.isNaN()) "" else " · τ ${"%.3f".format(a.tau)} · τ_id ${"%.3f".format(a.tauId)}")
                 Text(a.headline, color = if (a.calibrated) Kz.Pass else Kz.Warn, fontSize = 13.sp)
+                a.fitLine?.let { Note(it) }
                 if (!a.loadable) Text(a.problem ?: "Twin cannot be loaded", color = Kz.Defect, fontSize = 13.sp)
                 PrimaryButton("INSPECT", Modifier.fillMaxWidth(), enabled = a.loadable) { nav.go(Screen.Inspect(LineMode.INSPECT)) }
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {

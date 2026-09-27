@@ -48,6 +48,12 @@ data class Judgement(
     val views: IntArray? = null,
     /** Number of crops whose `s` entered the borderline vote (1 = no vote). */
     val votes: Int = 1,
+    /** FIT statistic of the judged crop and its gate (Fit.kt); NaN when the Twin has no fit gate. */
+    val fit: Double = Double.NaN,
+    val tauFit: Double = Double.NaN,
+    val fitOk: Boolean = true,
+    /** CANONICAL rotation: 0 = the crop at θ was judged, 1 = the crop at θ + π. */
+    val orientation: Int = 0,
 ) {
     /** True when the crop was scored (not REFRAME). */
     val scored: Boolean get() = !s.isNaN()
@@ -76,6 +82,8 @@ object VerdictEngine {
     const val REASON_IDENTITY = "identity"
     const val REASON_SHAPE = "shape"
     const val REASON_COVERAGE = "coverage"
+    /** The whole crop is further from the taught part than any same-part crop (a look-alike / another object). */
+    const val REASON_FIT = "fit"
 
     /** Step 1: a presentation whose sanity failed (reason = the §2.6 name). */
     fun reframe(sanity: SanityReason, gh: Int = 0, gw: Int = 0): Judgement {
@@ -100,11 +108,15 @@ object VerdictEngine {
         score: ScoreResult,
         coverageCut: Double,
         views: IntArray? = null,
+        tauFit: Double = Double.NaN,
+        orientation: Int = 0,
     ): Judgement {
         val idOk = sim >= tauId
+        val fitOk = tauFit.isNaN() || score.fit.isNaN() || score.fit <= tauFit
         val (verdict, reason) = when {
             !idOk -> Verdict.NOT_ENROLLED to REASON_IDENTITY
             !geometry.ok -> Verdict.NOT_ENROLLED to REASON_SHAPE
+            !fitOk -> Verdict.NOT_ENROLLED to REASON_FIT
             else -> scoreVerdict(score.s, score.anomalousFraction, coverageCut)
         }
         return Judgement(
@@ -113,6 +125,7 @@ object VerdictEngine {
             sensitivity = score.sensitivity, anomalousFraction = score.anomalousFraction, areaPct = score.areaPct,
             coreCount = score.coreCount, peakRow = score.peakRow, peakCol = score.peakCol, gh = score.gh, gw = score.gw,
             smoothed = score.smoothed, dmap = score.dmap, views = views,
+            fit = score.fit, tauFit = tauFit, fitOk = fitOk, orientation = orientation,
         )
     }
 

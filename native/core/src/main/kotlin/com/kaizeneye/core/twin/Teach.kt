@@ -65,6 +65,8 @@ data class TeachParams(
      * result is identical for any value (1 = the calling thread only).
      */
     val threads: Int = 1,
+    /** Enables the FIT gate (Fit.kt): the Twin gets `thresholds.fit`, derived from the leave-segment-out fits. Off = spec-only Twin. */
+    val fit: FitParams? = null,
 ) {
     companion object {
         /** Defaults with the pipeline's core threshold and score rule. */
@@ -309,6 +311,7 @@ object TeachBuilder {
         // 7. Leave-segment-out scores on the rounded keyframe maps (NaN = skipped: no bank row qualifies).
         val lsoMode = if (segmentsUsed < 2) LsoMode.KEYFRAME else LsoMode.SEGMENT
         val lsoAll = DoubleArray(kCount) { Double.NaN }
+        val lsoFitAll = DoubleArray(kCount) { Double.NaN }
         fun lsoOf(k: Int) {
             val extra = FloatArray(m)
             var any = false
@@ -328,6 +331,7 @@ object TeachBuilder {
             val d = DoubleArray(np) { Double.NaN }
             for (i in idx.indices) d[idx[i]] = sqrt(max(0.0, out[i]))
             lsoAll[k] = Scoring.raw(d, ks, params.scoreRule, topFraction = params.topFraction)
+            lsoFitAll[k] = Scoring.fit(d, ks)
         }
         // Keyframes are independent; only the stateless exact CPU backend is called from several threads.
         val lsoParts = if (knn === Knn.CPU) minOf(params.threads, kCount) else 1
@@ -414,6 +418,10 @@ object TeachBuilder {
                 coverageCut = params.coverageCut,
                 sensitivity = params.sensitivity,
                 geometry = geometry,
+                fit = params.fit?.let { fp ->
+                    val fits = lsoKeyframes.map { lsoFitAll[it] }.filter { !it.isNaN() }.toDoubleArray()
+                    if (fits.isEmpty()) null else FitThreshold.derive(fits, DoubleArray(0), fp)
+                },
             ),
             certificate = null,
         )
