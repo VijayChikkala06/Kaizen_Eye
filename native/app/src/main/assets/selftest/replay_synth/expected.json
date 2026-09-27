@@ -1,0 +1,291 @@
+{
+ "analysisFactor": 4,
+ "inputSize": 320,
+ "teach": {
+  "startMs": 500,
+  "endMs": 4467
+ },
+ "line": {
+  "startMs": 4833
+ },
+ "verdicts": [
+  {
+   "tMs": 5533,
+   "frame": 166,
+   "trackId": 1,
+   "trigger": "LINE",
+   "judgeFrame": 165,
+   "judgeTMs": 5500,
+   "verdict": "PASS",
+   "reason": null,
+   "s": 0.7612907048729773,
+   "sim": 0.9967432043233709,
+   "borderline": false,
+   "voteVerdict": null,
+   "part": 1,
+   "label": "good"
+  },
+  {
+   "tMs": 6100,
+   "frame": 183,
+   "trackId": 2,
+   "trigger": "LINE",
+   "judgeFrame": 182,
+   "judgeTMs": 6067,
+   "verdict": "PASS",
+   "reason": null,
+   "s": 0.4457689781282806,
+   "sim": 0.9997045901429178,
+   "borderline": false,
+   "voteVerdict": null,
+   "part": 2,
+   "label": "good"
+  },
+  {
+   "tMs": 6667,
+   "frame": 200,
+   "trackId": 3,
+   "trigger": "LINE",
+   "judgeFrame": 199,
+   "judgeTMs": 6633,
+   "verdict": "DEFECT",
+   "reason": null,
+   "s": 1.4021774826732347,
+   "sim": 0.9981120395965096,
+   "borderline": false,
+   "voteVerdict": null,
+   "part": 3,
+   "label": "defect"
+  },
+  {
+   "tMs": 7233,
+   "frame": 217,
+   "trackId": 4,
+   "trigger": "LINE",
+   "judgeFrame": 216,
+   "judgeTMs": 7200,
+   "verdict": "PASS",
+   "reason": null,
+   "s": 0.4671587863447245,
+   "sim": 0.9995408643852511,
+   "borderline": false,
+   "voteVerdict": null,
+   "part": 4,
+   "label": "good"
+  },
+  {
+   "tMs": 7833,
+   "frame": 235,
+   "trackId": 5,
+   "trigger": "LINE",
+   "judgeFrame": 233,
+   "judgeTMs": 7767,
+   "verdict": "NOT_ENROLLED",
+   "reason": "IDENTITY",
+   "s": 1.2515754534080958,
+   "sim": 0.9517807913115078,
+   "borderline": false,
+   "voteVerdict": null,
+   "part": 5,
+   "label": "wrong"
+  },
+  {
+   "tMs": 8367,
+   "frame": 251,
+   "trackId": 6,
+   "trigger": "LINE",
+   "judgeFrame": 250,
+   "judgeTMs": 8333,
+   "verdict": "PASS",
+   "reason": null,
+   "s": 0.551508745290031,
+   "sim": 0.9990501949744589,
+   "borderline": false,
+   "voteVerdict": null,
+   "part": 6,
+   "label": "good"
+  },
+  {
+   "tMs": 8933,
+   "frame": 268,
+   "trackId": 7,
+   "trigger": "LINE",
+   "judgeFrame": 267,
+   "judgeTMs": 8900,
+   "verdict": "PASS",
+   "reason": null,
+   "s": 0.4633852629502378,
+   "sim": 0.9997600919360254,
+   "borderline": false,
+   "voteVerdict": null,
+   "part": 7,
+   "label": "good"
+  },
+  {
+   "tMs": 9500,
+   "frame": 285,
+   "trackId": 8,
+   "trigger": "LINE",
+   "judgeFrame": 284,
+   "judgeTMs": 9467,
+   "verdict": "DEFECT",
+   "reason": null,
+   "s": 1.1533571935902365,
+   "sim": 0.995245523271777,
+   "borderline": true,
+   "voteVerdict": null,
+   "part": 8,
+   "label": "defect"
+  },
+  {
+   "tMs": 10067,
+   "frame": 302,
+   "trackId": 9,
+   "trigger": "LINE",
+   "judgeFrame": 301,
+   "judgeTMs": 10033,
+   "verdict": "PASS",
+   "reason": null,
+   "s": 0.6988091989052742,
+   "sim": 0.9974446814374821,
+   "borderline": false,
+   "voteVerdict": null,
+   "part": 9,
+   "label": "good"
+  },
+  {
+   "tMs": 10633,
+   "frame": 319,
+   "trackId": 10,
+   "trigger": "LINE",
+   "judgeFrame": 318,
+   "judgeTMs": 10600,
+   "verdict": "PASS",
+   "reason": null,
+   "s": 0.45757304946508776,
+   "sim": 0.9998021306662552,
+   "borderline": false,
+   "voteVerdict": null,
+   "part": 10,
+   "label": "good"
+  }
+ ],
+ "exited": [
+  {
+   "tMs": 6333,
+   "frame": 190,
+   "trackId": 1,
+   "judged": true,
+   "confirmed": true
+  },
+  {
+   "tMs": 6900,
+   "frame": 207,
+   "trackId": 2,
+   "judged": true,
+   "confirmed": true
+  },
+  {
+   "tMs": 7467,
+   "frame": 224,
+   "trackId": 3,
+   "judged": true,
+   "confirmed": true
+  },
+  {
+   "tMs": 8033,
+   "frame": 241,
+   "trackId": 4,
+   "judged": true,
+   "confirmed": true
+  },
+  {
+   "tMs": 8533,
+   "frame": 256,
+   "trackId": 5,
+   "judged": true,
+   "confirmed": true
+  },
+  {
+   "tMs": 9167,
+   "frame": 275,
+   "trackId": 6,
+   "judged": true,
+   "confirmed": true
+  },
+  {
+   "tMs": 9733,
+   "frame": 292,
+   "trackId": 7,
+   "judged": true,
+   "confirmed": true
+  },
+  {
+   "tMs": 10300,
+   "frame": 309,
+   "trackId": 8,
+   "judged": true,
+   "confirmed": true
+  },
+  {
+   "tMs": 10867,
+   "frame": 326,
+   "trackId": 9,
+   "judged": true,
+   "confirmed": true
+  },
+  {
+   "tMs": 11433,
+   "frame": 343,
+   "trackId": 10,
+   "judged": true,
+   "confirmed": true
+  }
+ ],
+ "sheet": {
+  "mu": [
+   52.0,
+   88.0,
+   74.0
+  ],
+  "sigma": [
+   3.0,
+   3.0,
+   3.0
+  ]
+ },
+ "twin": {
+  "tau": 0.7081898530584435,
+  "tauId": 0.9763989813550142,
+  "tauIdRule": "no-negatives",
+  "keyframes": 16,
+  "bankRows": 1063,
+  "framesSeen": 120,
+  "framesAccepted": 120,
+  "framesKept": 72,
+  "segmentsUsed": 5,
+  "lso": [
+   0.40935332036290845,
+   0.4691194184585161,
+   0.48101781496365015,
+   0.44510582749487504,
+   0.4740859641099905,
+   0.39536618246881283,
+   0.44406451536820823,
+   0.40640585822317143,
+   0.4867465549426517,
+   0.5031186192841756,
+   0.5058498950417454,
+   0.46374992257548,
+   0.4787343828406872,
+   0.46983358669526826,
+   0.41434027977508564,
+   0.3963232985911464
+  ]
+ },
+ "borderlineRule": "|s - 1| <= 0.1 or |sim - tauId| <= 0.02: any verdict accepted",
+ "generator": "tools/lab/make_replay_synth.py (twin_ref + backbone_r18_320.tflite on the decoded JPEG frames)",
+ "twinRefSha256": "65986741f17962966b9aa93c7c1a6ac011d75c7d2c28cc9009ddff7c560fbec6",
+ "backboneSha256": "e881924d3498291f33a7c5e21c01e4f4489d334a0c5c19151c354c38ca2619ba",
+ "note": "SYNTHETIC - mechanics regression only, not evidence"
+}

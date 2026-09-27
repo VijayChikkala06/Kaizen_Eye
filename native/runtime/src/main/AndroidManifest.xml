@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- No permissions on purpose. The runtime only contributes two private, bound services, each in its own process:
+         ":probe" - accelerator benchmark (a native NPU/GPU crash there cannot take the app down; crash guard in Runtime),
+         ":vlm"   - LiteRT-LM explanation engine (liblitertlm_jni.so embeds its own LiteRT and must never share a process
+                    with the vision LiteRT runtime). -->
+    <application>
+        <service
+            android:name="com.kaizeneye.runtime.ProbeService"
+            android:exported="false"
+            android:process=":probe" />
+        <service
+            android:name="com.kaizeneye.runtime.VlmService"
+            android:exported="false"
+            android:process=":vlm" />
+    </application>
+</manifest>

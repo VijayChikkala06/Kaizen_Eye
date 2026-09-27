@@ -1,0 +1,14 @@
+﻿libandroidx.graphics.path.so
+libimage_processing_util_jni.so
+libLiteRt.so
+liblitert_jni.so
+libLiteRtClGlAccelerator.so
+libLiteRtCompilerPlugin_Qualcomm.so
+libLiteRtDispatch_Qualcomm.so
+liblitertlm_jni.so
+libQnnHtp.so
+libQnnHtpPrepare.so
+libQnnHtpV81Skel.so
+libQnnHtpV81Stub.so
+libQnnSystem.so
+libsurface_util_jni.so

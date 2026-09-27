@@ -1,0 +1,5 @@
+﻿# LiteRT v2.2.0 NPU runtime (SM8850 / Hexagon v81) - extracted from litert_npu_runtime_libraries_jit.zip
+# source: https://github.com/google-ai-edge/LiteRT/releases/download/v2.2.0/litert_npu_runtime_libraries_jit.zip
+zip  D6D160104F110E690F1C9B0C54AB3855AF1A12E405DCC6E644DD7E3E1955AAC4
+C4ABFFF6C99EC218F545415A81A2A03A3EE3E21DF2EA911902D6B7BBFEDA80BF  libLiteRtDispatch_Qualcomm.so
+425E5CAF007F834748C6BF67AFF265D7E21512A01910F219FAB6B7749EF57732  libLiteRtCompilerPlugin_Qualcomm.so

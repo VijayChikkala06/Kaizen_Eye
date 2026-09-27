@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <!-- Deliberately NO INTERNET permission: the app cannot phone home (enforced by tools/apk-audit.ps1). -->
+    <uses-feature android:name="android.hardware.camera" android:required="true" />
+    <uses-feature android:name="android.hardware.camera.flash" android:required="false" />
+    <uses-permission android:name="android.permission.CAMERA" />
+    <uses-permission android:name="android.permission.VIBRATE" />
+
+    <!-- Library manifests (LiteRT's Play AI-pack delivery) contribute these; nothing here uses them. -->
+    <uses-permission android:name="android.permission.INTERNET" tools:node="remove" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" tools:node="remove" />
+    <uses-permission android:name="android.permission.WAKE_LOCK" tools:node="remove" />
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" tools:node="remove" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" tools:node="remove" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" tools:node="remove" />
+
+    <application
+        android:name=".KaizenApp"
+        android:allowBackup="false"
+        android:icon="@mipmap/ic_launcher"
+        android:label="@string/app_name"
+        android:supportsRtl="false"
+        android:theme="@style/Theme.KaizenEye2">
+
+        <!-- DSP/GPU native libraries the NPU/GPU runtimes dlopen (already merged from litert; declared explicitly on purpose). -->
+        <uses-native-library android:name="libcdsprpc.so" android:required="false" />
+        <uses-native-library android:name="libOpenCL.so" android:required="false" />
+        <uses-native-library android:name="libvndksupport.so" android:required="false" />
+
+        <!-- LiteRT's Play AI-pack delivery (litert-api -> ai-delivery -> asset-delivery) adds these; models here are bundled or
+             sideloaded, never delivered by Play, so they are removed (two of them are exported). Checked by apk-audit. -->
+        <service android:name="com.google.android.play.core.assetpacks.AssetPackExtractionService" tools:node="remove" />
+        <service android:name="com.google.android.play.core.assetpacks.ExtractionForegroundService" tools:node="remove" />
+        <receiver android:name="com.google.android.play.core.assetpacks.SessionStateBroadcastReceiver" tools:node="remove" />
+
+        <activity
+            android:name=".MainActivity"
+            android:configChanges="orientation|screenSize|keyboardHidden"
+            android:exported="true"
+            android:launchMode="singleTop"
+            android:screenOrientation="portrait">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+    </application>
+
+</manifest>

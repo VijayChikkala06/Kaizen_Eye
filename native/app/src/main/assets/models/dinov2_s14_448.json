@@ -1,0 +1,127 @@
+{
+  "backbone": "dinov2_vits14",
+  "input_size": 448,
+  "grid_h": 32,
+  "grid_w": 32,
+  "dim": 384,
+  "patch_size": 14,
+  "input": "NHWC float32 RGB 0..255",
+  "output": "NHWC float32 [1,grid_h,grid_w,dim]",
+  "outputs": {
+    "patch": "NHWC float32 [1,32,32,384]: final-LayerNorm patch tokens, row-major p = r*32 + c, NOT L2-normalised",
+    "cls": "float32 [1,384]: final-LayerNorm CLS token"
+  },
+  "tflite_output_order": "output index 0 = patch [1,32,32,384], index 1 = cls [1,384] (tensor names StatefulPartitionedCall:1 / :0; signature 'serving_default' outputs 'patch', 'cls') - identify by shape",
+  "l2_normalize_patches": true,
+  "preprocess": "ImageNet mean (0.485,0.456,0.406) / std (0.229,0.224,0.225) on x/255, baked into the graph",
+  "pos_embed": "pretrained 37x37 grid resized once to 32x32 (bicubic, align_corners=False, scale_factor (32+0.1)/37, antialias off - the facebookresearch/dinov2 reference), stored as a constant",
+  "pretrained": true,
+  "license": "Apache-2.0",
+  "source": "https://huggingface.co/facebook/dinov2-small",
+  "weights_file": "model.safetensors",
+  "weights_bytes": 88249960,
+  "weights_sha256": "ae1e99fcefd534ed978cdeb8326f08030c96e28b7a81ffcbc98a857c84d14be1",
+  "config_sha256": "1809f83e3bdb1609a501a610ad4a742f4fd8ae44d72ca4aa0df52d1f2ac8628d",
+  "files": {
+    "tflite_fp32": {
+      "file": "dinov2_s14_448_fp32.tflite",
+      "bytes": 87762856,
+      "sha256": "6c44ca64acd23b38bc4e8f813f8792e1baf8c44c1ae2bf825ca15890481dc290"
+    },
+    "tflite_fp16w": {
+      "file": "dinov2_s14_448_fp16w.tflite",
+      "bytes": 43954424,
+      "sha256": "58c86e0b5e1c6ccdaee4fb329b1d6e0e1e8b04577d53c2afd9f9f18d504ec223"
+    },
+    "onnx": {
+      "file": "dinov2_s14_448.onnx",
+      "bytes": 87728589,
+      "sha256": "5421d92063923b39a7581435db2f81402bcfa2ced2c231ff44e465ea7428d9d4"
+    },
+    "knn": {
+      "file": "knn_p1024_d384_k2400.tflite",
+      "bytes": 1768,
+      "sha256": "41ffa92cd06e3b296048cfb866c358c535d735253795a4bfea2a5afc01159fb8"
+    }
+  },
+  "precision": {
+    "tflite_fp32": "float32 weights and activations",
+    "tflite_fp16w": "float16 weights (DEQUANTIZE to float32 at run time), float32 activations"
+  },
+  "parity_vs_torch": {
+    "onnx_ort_1.30.0": {
+      "random_u8_seed0": {
+        "mean_patch_cos": 1.0,
+        "min_patch_cos": 1.0,
+        "cls_cos": 1.0
+      },
+      "photo_good_00": {
+        "mean_patch_cos": 1.0,
+        "min_patch_cos": 1.0,
+        "cls_cos": 1.0
+      },
+      "photo_good_01": {
+        "mean_patch_cos": 1.0,
+        "min_patch_cos": 1.0,
+        "cls_cos": 1.0
+      },
+      "flat_grey_128": {
+        "mean_patch_cos": 1.0,
+        "min_patch_cos": 1.0,
+        "cls_cos": 1.0
+      }
+    },
+    "tflite_fp32": {
+      "random_u8_seed0": {
+        "mean_patch_cos": 1.0,
+        "min_patch_cos": 1.0,
+        "cls_cos": 1.0
+      },
+      "photo_good_00": {
+        "mean_patch_cos": 1.0,
+        "min_patch_cos": 1.0,
+        "cls_cos": 1.0
+      },
+      "photo_good_01": {
+        "mean_patch_cos": 1.0,
+        "min_patch_cos": 1.0,
+        "cls_cos": 1.0
+      },
+      "flat_grey_128": {
+        "mean_patch_cos": 1.0,
+        "min_patch_cos": 1.0,
+        "cls_cos": 1.0
+      }
+    },
+    "tflite_fp16w": {
+      "random_u8_seed0": {
+        "mean_patch_cos": 0.9999982,
+        "min_patch_cos": 0.9999965,
+        "cls_cos": 0.9999975
+      },
+      "photo_good_00": {
+        "mean_patch_cos": 0.9999981,
+        "min_patch_cos": 0.9999927,
+        "cls_cos": 0.9999977
+      },
+      "photo_good_01": {
+        "mean_patch_cos": 0.9999976,
+        "min_patch_cos": 0.9999876,
+        "cls_cos": 0.9999973
+      },
+      "flat_grey_128": {
+        "mean_patch_cos": 0.9999981,
+        "min_patch_cos": 0.9999912,
+        "cls_cos": 0.9999983
+      }
+    }
+  },
+  "laptop_cpu_ms_median10": {
+    "onnx_ort_cpu_4threads": 191.1,
+    "tflite_fp32_cpu_4threads": 273.5,
+    "tflite_fp32_cpu_1thread": 930.1,
+    "tflite_fp16w_cpu_4threads": 306.7,
+    "tflite_fp16w_cpu_1thread": 937.0
+  },
+  "exporter": "tools/dinov2/export_dinov2.py (torch 2.13 -> ONNX opset 17 -> onnxsim -> onnx2tf 1.29.24 / TF 2.19.1)"
+}

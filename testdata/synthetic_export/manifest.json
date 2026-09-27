@@ -1,0 +1,67 @@
+{
+ "schema": 1,
+ "createdAtMs": 1790000000000,
+ "twinId": "synthetic-bracket",
+ "twinName": "SYNTHETIC bracket",
+ "pipeline": {
+  "backboneId": "r18_320_f32",
+  "backboneSha256": "e881924d3498291f33a7c5e21c01e4f4489d334a0c5c19151c354c38ca2619ba",
+  "inputSize": 320,
+  "gh": 40,
+  "gw": 40,
+  "dim": 128,
+  "precision": "fp32",
+  "l2NormalizePatches": false,
+  "preprocessVersion": 1,
+  "mask": {
+   "analysisFactor": 4,
+   "kSigma": 4.0,
+   "sigmaMin": 3.0,
+   "minBlobPx": 30,
+   "borderMargin": 2,
+   "cropMargin": 0.1,
+   "coreThreshold": 0.5
+  },
+  "knnGraphId": "knn_p1600_d128",
+  "scoreRule": "SMOOTHED_MAX",
+  "bankRule": "CORESET",
+  "rotation": "NONE"
+ },
+ "fingerprint": "cad04c25ba260660c97eab1d8dd5d8104bf2f69eef5c90d6f6e91a684c24eb47",
+ "analysisFactor": 4,
+ "inputSize": 320,
+ "cropSize": 448,
+ "frameW": 1280,
+ "frameH": 720,
+ "sheet": {
+  "mu": [
+   52.0,
+   88.0,
+   74.0
+  ],
+  "sigma": [
+   3.0,
+   3.0,
+   3.0
+  ]
+ },
+ "twin": {
+  "tau": 0.8571540326747149,
+  "tauTeach": 0.8571540326747149,
+  "tauId": 0.9715280412852154,
+  "sensitivity": 1.0,
+  "coverageCut": 0.5,
+  "calibrated": true
+ },
+ "counts": {
+  "teach": 64,
+  "parts": 89,
+  "negatives": 8
+ },
+ "app": {
+  "generator": "tools/lab/make_synthetic_export.py",
+  "seed": 7,
+  "twinRefSha256": "65986741f17962966b9aa93c7c1a6ac011d75c7d2c28cc9009ddff7c560fbec6",
+  "note": "SYNTHETIC renders - mechanics/parser test only, not evidence"
+ }
+}

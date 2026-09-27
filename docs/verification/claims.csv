@@ -1,0 +1,13 @@
+claim,x_baseline,x_source,y_target,y_measured,y_source,n,threshold_or_setting,status,notes
+Teach time,legacy 20-photo enrolment (5 runs single operator),phone: legacy APK timing (TODO),<=30 s tap to Armed,,G3 teach runs (5x single operator),5,,TODO,
+Images needed,~20 aligned photos,legacy app,one 12 s clip; 16-32 auto keyframes; 0 defect images,,twin.json teach block,,,TODO,
+Wrong-object accepts,legacy 10 objects x 5,phone: legacy APK (TODO),>=90 % flagged NOT ENROLLED on >=20 held-out,,G3 held-out wrong objects,>=20,tau_id rule + geometry gate,TODO,look-alikes reported separately
+Decision latency,140-440 ms + manual capture,legacy measurements (literature/legacy log),<=100 ms p95 trigger->verdict,,G4 JSONL log,>=50,,TODO,
+Throughput,legacy single-photo ppm,legacy,>=120 parts/min; 50/50 judged once,,G4,50,,TODO,
+False-alarm bound,LOO max over 20 = 13.9 % @95 %,order statistic (literature),<=10 % @95 % (m>=29 valid) score gate only + gate counts,,Calibrate certificate,>=40 presented,tau = max valid score (never lowered),TODO,
+Defect recall,legacy on same parts,phone: legacy APK (TODO),>=80 % at stated threshold; false rejects with CP bound,,G3 seeded defects,>=10,sensitivity 1.0,TODO,
+Accelerator speed-up,CPU-only same model,selftest accel section,measured x (target >=10x backbone),,selftest.json accel,10 timed runs,same model variant,TODO,
+Explanation,score + heat map,legacy app,<=2 s offline sentence per reject + guard log,,G6 JSONL vlm records,,,TODO,
+Connectivity,cloud tools,competitor docs,0 INR/inference; airplane mode; no INTERNET permission,no INTERNET permission (apk-audit PASS),tools/apk-audit.ps1,,,PARTIAL,airplane-mode rehearsal still TODO
+Sustained run,-,-,10-min live soak; <=10 % fps drop; thermal log,,soak CSV,,,TODO,
+Cost / PPM,1.65-11 lakh INR stations,vendor quotes (slide),72999 INR phone; PPM = 2 % x human miss x (1 - measured recall),,arithmetic,,,TODO,

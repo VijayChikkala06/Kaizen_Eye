@@ -1,0 +1,190 @@
+{
+ "fps": 30,
+ "frameW": 1280,
+ "frameH": 720,
+ "analysisFactor": 4,
+ "inputSize": 320,
+ "jpegQuality": 90,
+ "segments": [
+  {
+   "name": "sheet",
+   "startFrame": 0,
+   "endFrame": 14,
+   "startMs": 0,
+   "endMs": 467,
+   "action": "empty-sheet fit (spec 2.1) over these frames, ROI = whole frame"
+  },
+  {
+   "name": "teach",
+   "startFrame": 15,
+   "endFrame": 134,
+   "startMs": 500,
+   "endMs": 4467,
+   "action": "teach (spec 7) from EVERY frame with startMs <= tMs <= endMs (no subsampling), no negatives"
+  },
+  {
+   "name": "gap",
+   "startFrame": 135,
+   "endFrame": 144,
+   "startMs": 4500,
+   "endMs": 4800,
+   "action": "empty sheet, nothing to do"
+  },
+  {
+   "name": "line",
+   "startFrame": 145,
+   "endFrame": 347,
+   "startMs": 4833,
+   "endMs": 11567,
+   "action": "inspect: a fresh tracker from startFrame on every frame; LINE trigger only is expected"
+  }
+ ],
+ "parameters": {
+  "note": "spec defaults; the self-test must run with these",
+  "mask": "twin_ref.MaskParams() defaults (kSigma 4, sigmaMin 3, minBlobPx 30, borderMargin 2, cropMargin 0.10, coreThreshold 0.5)",
+  "teach": "twin_ref.TeachParams() defaults (keep P40, kMin 16, kMax 32, 5 segments, ratio 0.10, minK 256, maxRows 2400, tauFactor 1.4)",
+  "tracker": {
+   "line": "axis X at 0.5*W (analysis), direction ANY, crossFrames 2",
+   "steady": "enabled (never fires here: parts move at 0.3 px/ms)",
+   "gate": "12 + 0.75 sqrt(area) + 0.5 |v| dt",
+   "bestK": 3
+  },
+  "backbone": "mobile/assets/models/backbone_r18_320.tflite (fp32), no L2 normalisation",
+  "sensitivity": 1.0,
+  "voting": false
+ },
+ "parts": [
+  {
+   "part": 1,
+   "label": "good",
+   "detail": null,
+   "entryFrame": 145,
+   "entryMs": 4833,
+   "crossesCentreFrame": 165,
+   "crossesCentreMs": 5500,
+   "exitFrame": 187,
+   "speedPxPerFrameAnalysis": 10.0,
+   "cyFull": 337.71,
+   "angleDeg": -0.007
+  },
+  {
+   "part": 2,
+   "label": "good",
+   "detail": null,
+   "entryFrame": 162,
+   "entryMs": 5400,
+   "crossesCentreFrame": 182,
+   "crossesCentreMs": 6067,
+   "exitFrame": 204,
+   "speedPxPerFrameAnalysis": 10.0,
+   "cyFull": 366.09,
+   "angleDeg": -4.713
+  },
+  {
+   "part": 3,
+   "label": "defect",
+   "detail": "chip",
+   "entryFrame": 179,
+   "entryMs": 5967,
+   "crossesCentreFrame": 199,
+   "crossesCentreMs": 6633,
+   "exitFrame": 221,
+   "speedPxPerFrameAnalysis": 10.0,
+   "cyFull": 338.88,
+   "angleDeg": 4.282
+  },
+  {
+   "part": 4,
+   "label": "good",
+   "detail": null,
+   "entryFrame": 196,
+   "entryMs": 6533,
+   "crossesCentreFrame": 216,
+   "crossesCentreMs": 7200,
+   "exitFrame": 238,
+   "speedPxPerFrameAnalysis": 10.0,
+   "cyFull": 337.79,
+   "angleDeg": 4.483
+  },
+  {
+   "part": 5,
+   "label": "wrong",
+   "detail": "hexnut",
+   "entryFrame": 213,
+   "entryMs": 7100,
+   "crossesCentreFrame": 233,
+   "crossesCentreMs": 7767,
+   "exitFrame": 255,
+   "speedPxPerFrameAnalysis": 10.0,
+   "cyFull": 367.31,
+   "angleDeg": -1.31
+  },
+  {
+   "part": 6,
+   "label": "good",
+   "detail": null,
+   "entryFrame": 230,
+   "entryMs": 7667,
+   "crossesCentreFrame": 250,
+   "crossesCentreMs": 8333,
+   "exitFrame": 272,
+   "speedPxPerFrameAnalysis": 10.0,
+   "cyFull": 360.68,
+   "angleDeg": 1.628
+  },
+  {
+   "part": 7,
+   "label": "good",
+   "detail": null,
+   "entryFrame": 247,
+   "entryMs": 8233,
+   "crossesCentreFrame": 267,
+   "crossesCentreMs": 8900,
+   "exitFrame": 289,
+   "speedPxPerFrameAnalysis": 10.0,
+   "cyFull": 346.52,
+   "angleDeg": -3.62
+  },
+  {
+   "part": 8,
+   "label": "defect",
+   "detail": "dot",
+   "entryFrame": 264,
+   "entryMs": 8800,
+   "crossesCentreFrame": 284,
+   "crossesCentreMs": 9467,
+   "exitFrame": 306,
+   "speedPxPerFrameAnalysis": 10.0,
+   "cyFull": 377.28,
+   "angleDeg": 1.704
+  },
+  {
+   "part": 9,
+   "label": "good",
+   "detail": null,
+   "entryFrame": 281,
+   "entryMs": 9367,
+   "crossesCentreFrame": 301,
+   "crossesCentreMs": 10033,
+   "exitFrame": 323,
+   "speedPxPerFrameAnalysis": 10.0,
+   "cyFull": 379.0,
+   "angleDeg": 0.491
+  },
+  {
+   "part": 10,
+   "label": "good",
+   "detail": null,
+   "entryFrame": 298,
+   "entryMs": 9933,
+   "crossesCentreFrame": 318,
+   "crossesCentreMs": 10600,
+   "exitFrame": 340,
+   "speedPxPerFrameAnalysis": 10.0,
+   "cyFull": 388.85,
+   "angleDeg": -2.955
+  }
+ ],
+ "frames": 348,
+ "note": "SYNTHETIC renders (PIL) - mechanics regression only, not evidence of accuracy"
+}

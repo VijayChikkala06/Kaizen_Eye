@@ -1,0 +1,13 @@
+﻿{
+    "schema":  1,
+    "note":  "SHA-256 of every model artifact; the app refuses mismatches. Weights outside the APK are pushed to getExternalFilesDir(\"models\").",
+    "external":  [
+                     {
+                         "file":  "FastVLM-0.5B.qualcomm.sm8850.litertlm",
+                         "bytes":  942374912,
+                         "sha256":  "0EB6860D5C3800DC02C86515A54387F0D8289E5096DB291FF6E4A993E312B482",
+                         "source":  "https://huggingface.co/litert-community/FastVLM-0.5B",
+                         "license":  "Apple Machine Learning Research Model License (apple-amlr) - research/demo only"
+                     }
+                 ]
+}

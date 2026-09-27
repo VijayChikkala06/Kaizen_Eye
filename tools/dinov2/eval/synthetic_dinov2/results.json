@@ -1,0 +1,3526 @@
+{
+ "export": "D:\\Projects\\Kaizen_Eye\\testdata\\synthetic_export",
+ "backbone": "dinov2",
+ "model": "D:\\Projects\\Kaizen_Eye\\tools\\dinov2\\out\\dinov2_s14_448_fp32.tflite",
+ "title": "SYNTHETIC",
+ "sensitivity": 1.0,
+ "calibParts": 24,
+ "checks": {
+  "covCompared": 158,
+  "covMismatch": 0,
+  "covMaxAbs": 0.0,
+  "geoCompared": 158,
+  "geoMaxRel": 0.0,
+  "thetaMaxAbs": 0.0
+ },
+ "phoneVsLaptop": null,
+ "default": "SMOOTHED_MAX/CORESET/NONE/LSO",
+ "winner": "SMOOTHED_MAX/CORESET/NONE/LSO",
+ "variants": {
+  "SMOOTHED_MAX/CORESET/NONE/LSO": {
+   "n": {
+    "good": 24,
+    "defect": 15,
+    "wrong": 12,
+    "rotated": 10,
+    "lookalike": 4
+   },
+   "auroc_defect": 1.0,
+   "auroc_identity": 1.0,
+   "auroc_identity_lookalike": 1.0,
+   "pass_good": {
+    "k": 24,
+    "n": 24,
+    "rate": 1.0,
+    "lo": 0.8575264022779265,
+    "hi": 1.0
+   },
+   "pass_rotated": {
+    "k": 10,
+    "n": 10,
+    "rate": 1.0,
+    "lo": 0.6915028921816884,
+    "hi": 1.0
+   },
+   "notenrolled_wrong": {
+    "k": 12,
+    "n": 12,
+    "rate": 1.0,
+    "lo": 0.7353515306026566,
+    "hi": 1.0
+   },
+   "notenrolled_lookalike": {
+    "k": 0,
+    "n": 4,
+    "rate": 0.0,
+    "lo": 0.0,
+    "hi": 0.6023646356165955
+   },
+   "defect_defect": {
+    "k": 10,
+    "n": 15,
+    "rate": 0.6666666666666666,
+    "lo": 0.383803732540855,
+    "hi": 0.8817588966335279
+   },
+   "twin": {
+    "tau": 0.7609814740240204,
+    "tauTeach": 0.7609814740240204,
+    "tauId": 0.7967122434143267,
+    "tauIdRule": "midpoint",
+    "keyframes": 32,
+    "bankRows": 1503,
+    "segmentsUsed": 5,
+    "framesKept": 37,
+    "calibrated": false,
+    "calValid": null
+   }
+  },
+  "SMOOTHED_MAX/CORESET/NONE/CALIBRATED": {
+   "n": {
+    "good": 24,
+    "defect": 15,
+    "wrong": 12,
+    "rotated": 10,
+    "lookalike": 4
+   },
+   "auroc_defect": 1.0,
+   "auroc_identity": 1.0,
+   "auroc_identity_lookalike": 1.0,
+   "pass_good": {
+    "k": 24,
+    "n": 24,
+    "rate": 1.0,
+    "lo": 0.8575264022779265,
+    "hi": 1.0
+   },
+   "pass_rotated": {
+    "k": 10,
+    "n": 10,
+    "rate": 1.0,
+    "lo": 0.6915028921816884,
+    "hi": 1.0
+   },
+   "notenrolled_wrong": {
+    "k": 12,
+    "n": 12,
+    "rate": 1.0,
+    "lo": 0.7353515306026566,
+    "hi": 1.0
+   },
+   "notenrolled_lookalike": {
+    "k": 0,
+    "n": 4,
+    "rate": 0.0,
+    "lo": 0.0,
+    "hi": 0.6023646356165955
+   },
+   "defect_defect": {
+    "k": 10,
+    "n": 15,
+    "rate": 0.6666666666666666,
+    "lo": 0.383803732540855,
+    "hi": 0.8817588966335279
+   },
+   "twin": {
+    "tau": 0.7609814740240204,
+    "tauTeach": 0.7609814740240204,
+    "tauId": 0.796731452703084,
+    "tauIdRule": "midpoint",
+    "keyframes": 32,
+    "bankRows": 1503,
+    "segmentsUsed": 5,
+    "framesKept": 37,
+    "calibrated": true,
+    "calValid": "24/24"
+   }
+  },
+  "SMOOTHED_MAX/TOPK_VIEWS/NONE/LSO": {
+   "n": {
+    "good": 24,
+    "defect": 15,
+    "wrong": 12,
+    "rotated": 10,
+    "lookalike": 4
+   },
+   "auroc_defect": 1.0,
+   "auroc_identity": 1.0,
+   "auroc_identity_lookalike": 1.0,
+   "pass_good": {
+    "k": 24,
+    "n": 24,
+    "rate": 1.0,
+    "lo": 0.8575264022779265,
+    "hi": 1.0
+   },
+   "pass_rotated": {
+    "k": 8,
+    "n": 10,
+    "rate": 0.8,
+    "lo": 0.44390453769256055,
+    "hi": 0.9747892736727408
+   },
+   "notenrolled_wrong": {
+    "k": 12,
+    "n": 12,
+    "rate": 1.0,
+    "lo": 0.7353515306026566,
+    "hi": 1.0
+   },
+   "notenrolled_lookalike": {
+    "k": 0,
+    "n": 4,
+    "rate": 0.0,
+    "lo": 0.0,
+    "hi": 0.6023646356165955
+   },
+   "defect_defect": {
+    "k": 10,
+    "n": 15,
+    "rate": 0.6666666666666666,
+    "lo": 0.383803732540855,
+    "hi": 0.8817588966335279
+   },
+   "twin": {
+    "tau": 0.7609814740240204,
+    "tauTeach": 0.7609814740240204,
+    "tauId": 0.7967122434143267,
+    "tauIdRule": "midpoint",
+    "keyframes": 32,
+    "bankRows": 1503,
+    "segmentsUsed": 5,
+    "framesKept": 37,
+    "calibrated": false,
+    "calValid": null
+   }
+  },
+  "SMOOTHED_MAX/TOPK_VIEWS/NONE/CALIBRATED": {
+   "n": {
+    "good": 24,
+    "defect": 15,
+    "wrong": 12,
+    "rotated": 10,
+    "lookalike": 4
+   },
+   "auroc_defect": 1.0,
+   "auroc_identity": 1.0,
+   "auroc_identity_lookalike": 1.0,
+   "pass_good": {
+    "k": 24,
+    "n": 24,
+    "rate": 1.0,
+    "lo": 0.8575264022779265,
+    "hi": 1.0
+   },
+   "pass_rotated": {
+    "k": 8,
+    "n": 10,
+    "rate": 0.8,
+    "lo": 0.44390453769256055,
+    "hi": 0.9747892736727408
+   },
+   "notenrolled_wrong": {
+    "k": 12,
+    "n": 12,
+    "rate": 1.0,
+    "lo": 0.7353515306026566,
+    "hi": 1.0
+   },
+   "notenrolled_lookalike": {
+    "k": 0,
+    "n": 4,
+    "rate": 0.0,
+    "lo": 0.0,
+    "hi": 0.6023646356165955
+   },
+   "defect_defect": {
+    "k": 10,
+    "n": 15,
+    "rate": 0.6666666666666666,
+    "lo": 0.383803732540855,
+    "hi": 0.8817588966335279
+   },
+   "twin": {
+    "tau": 0.7609814740240204,
+    "tauTeach": 0.7609814740240204,
+    "tauId": 0.796731452703084,
+    "tauIdRule": "midpoint",
+    "keyframes": 32,
+    "bankRows": 1503,
+    "segmentsUsed": 5,
+    "framesKept": 37,
+    "calibrated": true,
+    "calValid": "24/24"
+   }
+  },
+  "TOP1_MEAN/CORESET/NONE/LSO": {
+   "n": {
+    "good": 24,
+    "defect": 15,
+    "wrong": 12,
+    "rotated": 10,
+    "lookalike": 4
+   },
+   "auroc_defect": 1.0,
+   "auroc_identity": 1.0,
+   "auroc_identity_lookalike": 1.0,
+   "pass_good": {
+    "k": 24,
+    "n": 24,
+    "rate": 1.0,
+    "lo": 0.8575264022779265,
+    "hi": 1.0
+   },
+   "pass_rotated": {
+    "k": 10,
+    "n": 10,
+    "rate": 1.0,
+    "lo": 0.6915028921816884,
+    "hi": 1.0
+   },
+   "notenrolled_wrong": {
+    "k": 12,
+    "n": 12,
+    "rate": 1.0,
+    "lo": 0.7353515306026566,
+    "hi": 1.0
+   },
+   "notenrolled_lookalike": {
+    "k": 0,
+    "n": 4,
+    "rate": 0.0,
+    "lo": 0.0,
+    "hi": 0.6023646356165955
+   },
+   "defect_defect": {
+    "k": 10,
+    "n": 15,
+    "rate": 0.6666666666666666,
+    "lo": 0.383803732540855,
+    "hi": 0.8817588966335279
+   },
+   "twin": {
+    "tau": 0.8904221142664794,
+    "tauTeach": 0.8904221142664794,
+    "tauId": 0.7967122434143267,
+    "tauIdRule": "midpoint",
+    "keyframes": 32,
+    "bankRows": 1503,
+    "segmentsUsed": 5,
+    "framesKept": 37,
+    "calibrated": false,
+    "calValid": null
+   }
+  },
+  "TOP1_MEAN/CORESET/NONE/CALIBRATED": {
+   "n": {
+    "good": 24,
+    "defect": 15,
+    "wrong": 12,
+    "rotated": 10,
+    "lookalike": 4
+   },
+   "auroc_defect": 1.0,
+   "auroc_identity": 1.0,
+   "auroc_identity_lookalike": 1.0,
+   "pass_good": {
+    "k": 24,
+    "n": 24,
+    "rate": 1.0,
+    "lo": 0.8575264022779265,
+    "hi": 1.0
+   },
+   "pass_rotated": {
+    "k": 10,
+    "n": 10,
+    "rate": 1.0,
+    "lo": 0.6915028921816884,
+    "hi": 1.0
+   },
+   "notenrolled_wrong": {
+    "k": 12,
+    "n": 12,
+    "rate": 1.0,
+    "lo": 0.7353515306026566,
+    "hi": 1.0
+   },
+   "notenrolled_lookalike": {
+    "k": 0,
+    "n": 4,
+    "rate": 0.0,
+    "lo": 0.0,
+    "hi": 0.6023646356165955
+   },
+   "defect_defect": {
+    "k": 10,
+    "n": 15,
+    "rate": 0.6666666666666666,
+    "lo": 0.383803732540855,
+    "hi": 0.8817588966335279
+   },
+   "twin": {
+    "tau": 0.8904221142664794,
+    "tauTeach": 0.8904221142664794,
+    "tauId": 0.796731452703084,
+    "tauIdRule": "midpoint",
+    "keyframes": 32,
+    "bankRows": 1503,
+    "segmentsUsed": 5,
+    "framesKept": 37,
+    "calibrated": true,
+    "calValid": "24/24"
+   }
+  },
+  "TOP1_MEAN/TOPK_VIEWS/NONE/LSO": {
+   "n": {
+    "good": 24,
+    "defect": 15,
+    "wrong": 12,
+    "rotated": 10,
+    "lookalike": 4
+   },
+   "auroc_defect": 1.0,
+   "auroc_identity": 1.0,
+   "auroc_identity_lookalike": 1.0,
+   "pass_good": {
+    "k": 24,
+    "n": 24,
+    "rate": 1.0,
+    "lo": 0.8575264022779265,
+    "hi": 1.0
+   },
+   "pass_rotated": {
+    "k": 9,
+    "n": 10,
+    "rate": 0.9,
+    "lo": 0.5549838829715554,
+    "hi": 0.9974714214554297
+   },
+   "notenrolled_wrong": {
+    "k": 12,
+    "n": 12,
+    "rate": 1.0,
+    "lo": 0.7353515306026566,
+    "hi": 1.0
+   },
+   "notenrolled_lookalike": {
+    "k": 0,
+    "n": 4,
+    "rate": 0.0,
+    "lo": 0.0,
+    "hi": 0.6023646356165955
+   },
+   "defect_defect": {
+    "k": 10,
+    "n": 15,
+    "rate": 0.6666666666666666,
+    "lo": 0.383803732540855,
+    "hi": 0.8817588966335279
+   },
+   "twin": {
+    "tau": 0.8904221142664794,
+    "tauTeach": 0.8904221142664794,
+    "tauId": 0.7967122434143267,
+    "tauIdRule": "midpoint",
+    "keyframes": 32,
+    "bankRows": 1503,
+    "segmentsUsed": 5,
+    "framesKept": 37,
+    "calibrated": false,
+    "calValid": null
+   }
+  },
+  "TOP1_MEAN/TOPK_VIEWS/NONE/CALIBRATED": {
+   "n": {
+    "good": 24,
+    "defect": 15,
+    "wrong": 12,
+    "rotated": 10,
+    "lookalike": 4
+   },
+   "auroc_defect": 1.0,
+   "auroc_identity": 1.0,
+   "auroc_identity_lookalike": 1.0,
+   "pass_good": {
+    "k": 24,
+    "n": 24,
+    "rate": 1.0,
+    "lo": 0.8575264022779265,
+    "hi": 1.0
+   },
+   "pass_rotated": {
+    "k": 9,
+    "n": 10,
+    "rate": 0.9,
+    "lo": 0.5549838829715554,
+    "hi": 0.9974714214554297
+   },
+   "notenrolled_wrong": {
+    "k": 12,
+    "n": 12,
+    "rate": 1.0,
+    "lo": 0.7353515306026566,
+    "hi": 1.0
+   },
+   "notenrolled_lookalike": {
+    "k": 0,
+    "n": 4,
+    "rate": 0.0,
+    "lo": 0.0,
+    "hi": 0.6023646356165955
+   },
+   "defect_defect": {
+    "k": 10,
+    "n": 15,
+    "rate": 0.6666666666666666,
+    "lo": 0.383803732540855,
+    "hi": 0.8817588966335279
+   },
+   "twin": {
+    "tau": 0.8904221142664794,
+    "tauTeach": 0.8904221142664794,
+    "tauId": 0.796731452703084,
+    "tauIdRule": "midpoint",
+    "keyframes": 32,
+    "bankRows": 1503,
+    "segmentsUsed": 5,
+    "framesKept": 37,
+    "calibrated": true,
+    "calValid": "24/24"
+   }
+  },
+  "SMOOTHED_MAX/CORESET/CANONICAL/LSO": {
+   "n": {
+    "good": 24,
+    "defect": 15,
+    "wrong": 12,
+    "rotated": 10,
+    "lookalike": 4
+   },
+   "auroc_defect": 1.0,
+   "auroc_identity": 1.0,
+   "auroc_identity_lookalike": 1.0,
+   "pass_good": {
+    "k": 24,
+    "n": 24,
+    "rate": 1.0,
+    "lo": 0.8575264022779265,
+    "hi": 1.0
+   },
+   "pass_rotated": {
+    "k": 10,
+    "n": 10,
+    "rate": 1.0,
+    "lo": 0.6915028921816884,
+    "hi": 1.0
+   },
+   "notenrolled_wrong": {
+    "k": 12,
+    "n": 12,
+    "rate": 1.0,
+    "lo": 0.7353515306026566,
+    "hi": 1.0
+   },
+   "notenrolled_lookalike": {
+    "k": 0,
+    "n": 4,
+    "rate": 0.0,
+    "lo": 0.0,
+    "hi": 0.6023646356165955
+   },
+   "defect_defect": {
+    "k": 12,
+    "n": 15,
+    "rate": 0.8,
+    "lo": 0.5191088661927097,
+    "hi": 0.9566879948938549
+   },
+   "twin": {
+    "tau": 0.6224571918748104,
+    "tauTeach": 0.6224571918748104,
+    "tauId": 0.8264921902553897,
+    "tauIdRule": "midpoint",
+    "keyframes": 32,
+    "bankRows": 1485,
+    "segmentsUsed": 5,
+    "framesKept": 37,
+    "calibrated": false,
+    "calValid": null
+   }
+  },
+  "SMOOTHED_MAX/CORESET/CANONICAL/CALIBRATED": {
+   "n": {
+    "good": 24,
+    "defect": 15,
+    "wrong": 12,
+    "rotated": 10,
+    "lookalike": 4
+   },
+   "auroc_defect": 1.0,
+   "auroc_identity": 1.0,
+   "auroc_identity_lookalike": 1.0,
+   "pass_good": {
+    "k": 24,
+    "n": 24,
+    "rate": 1.0,
+    "lo": 0.8575264022779265,
+    "hi": 1.0
+   },
+   "pass_rotated": {
+    "k": 10,
+    "n": 10,
+    "rate": 1.0,
+    "lo": 0.6915028921816884,
+    "hi": 1.0
+   },
+   "notenrolled_wrong": {
+    "k": 12,
+    "n": 12,
+    "rate": 1.0,
+    "lo": 0.7353515306026566,
+    "hi": 1.0
+   },
+   "notenrolled_lookalike": {
+    "k": 0,
+    "n": 4,
+    "rate": 0.0,
+    "lo": 0.0,
+    "hi": 0.6023646356165955
+   },
+   "defect_defect": {
+    "k": 12,
+    "n": 15,
+    "rate": 0.8,
+    "lo": 0.5191088661927097,
+    "hi": 0.9566879948938549
+   },
+   "twin": {
+    "tau": 0.6224571918748104,
+    "tauTeach": 0.6224571918748104,
+    "tauId": 0.8254734445367793,
+    "tauIdRule": "midpoint",
+    "keyframes": 32,
+    "bankRows": 1485,
+    "segmentsUsed": 5,
+    "framesKept": 37,
+    "calibrated": true,
+    "calValid": "24/24"
+   }
+  },
+  "SMOOTHED_MAX/TOPK_VIEWS/CANONICAL/LSO": {
+   "n": {
+    "good": 24,
+    "defect": 15,
+    "wrong": 12,
+    "rotated": 10,
+    "lookalike": 4
+   },
+   "auroc_defect": 1.0,
+   "auroc_identity": 1.0,
+   "auroc_identity_lookalike": 1.0,
+   "pass_good": {
+    "k": 24,
+    "n": 24,
+    "rate": 1.0,
+    "lo": 0.8575264022779265,
+    "hi": 1.0
+   },
+   "pass_rotated": {
+    "k": 10,
+    "n": 10,
+    "rate": 1.0,
+    "lo": 0.6915028921816884,
+    "hi": 1.0
+   },
+   "notenrolled_wrong": {
+    "k": 12,
+    "n": 12,
+    "rate": 1.0,
+    "lo": 0.7353515306026566,
+    "hi": 1.0
+   },
+   "notenrolled_lookalike": {
+    "k": 0,
+    "n": 4,
+    "rate": 0.0,
+    "lo": 0.0,
+    "hi": 0.6023646356165955
+   },
+   "defect_defect": {
+    "k": 11,
+    "n": 15,
+    "rate": 0.7333333333333333,
+    "lo": 0.44899675896294866,
+    "hi": 0.9221284537093197
+   },
+   "twin": {
+    "tau": 0.6224571918748104,
+    "tauTeach": 0.6224571918748104,
+    "tauId": 0.8264921902553897,
+    "tauIdRule": "midpoint",
+    "keyframes": 32,
+    "bankRows": 1485,
+    "segmentsUsed": 5,
+    "framesKept": 37,
+    "calibrated": false,
+    "calValid": null
+   }
+  },
+  "SMOOTHED_MAX/TOPK_VIEWS/CANONICAL/CALIBRATED": {
+   "n": {
+    "good": 24,
+    "defect": 15,
+    "wrong": 12,
+    "rotated": 10,
+    "lookalike": 4
+   },
+   "auroc_defect": 1.0,
+   "auroc_identity": 1.0,
+   "auroc_identity_lookalike": 1.0,
+   "pass_good": {
+    "k": 24,
+    "n": 24,
+    "rate": 1.0,
+    "lo": 0.8575264022779265,
+    "hi": 1.0
+   },
+   "pass_rotated": {
+    "k": 10,
+    "n": 10,
+    "rate": 1.0,
+    "lo": 0.6915028921816884,
+    "hi": 1.0
+   },
+   "notenrolled_wrong": {
+    "k": 12,
+    "n": 12,
+    "rate": 1.0,
+    "lo": 0.7353515306026566,
+    "hi": 1.0
+   },
+   "notenrolled_lookalike": {
+    "k": 0,
+    "n": 4,
+    "rate": 0.0,
+    "lo": 0.0,
+    "hi": 0.6023646356165955
+   },
+   "defect_defect": {
+    "k": 11,
+    "n": 15,
+    "rate": 0.7333333333333333,
+    "lo": 0.44899675896294866,
+    "hi": 0.9221284537093197
+   },
+   "twin": {
+    "tau": 0.6224571918748104,
+    "tauTeach": 0.6224571918748104,
+    "tauId": 0.8254734445367793,
+    "tauIdRule": "midpoint",
+    "keyframes": 32,
+    "bankRows": 1485,
+    "segmentsUsed": 5,
+    "framesKept": 37,
+    "calibrated": true,
+    "calValid": "24/24"
+   }
+  },
+  "TOP1_MEAN/CORESET/CANONICAL/LSO": {
+   "n": {
+    "good": 24,
+    "defect": 15,
+    "wrong": 12,
+    "rotated": 10,
+    "lookalike": 4
+   },
+   "auroc_defect": 1.0,
+   "auroc_identity": 1.0,
+   "auroc_identity_lookalike": 1.0,
+   "pass_good": {
+    "k": 24,
+    "n": 24,
+    "rate": 1.0,
+    "lo": 0.8575264022779265,
+    "hi": 1.0
+   },
+   "pass_rotated": {
+    "k": 10,
+    "n": 10,
+    "rate": 1.0,
+    "lo": 0.6915028921816884,
+    "hi": 1.0
+   },
+   "notenrolled_wrong": {
+    "k": 12,
+    "n": 12,
+    "rate": 1.0,
+    "lo": 0.7353515306026566,
+    "hi": 1.0
+   },
+   "notenrolled_lookalike": {
+    "k": 0,
+    "n": 4,
+    "rate": 0.0,
+    "lo": 0.0,
+    "hi": 0.6023646356165955
+   },
+   "defect_defect": {
+    "k": 10,
+    "n": 15,
+    "rate": 0.6666666666666666,
+    "lo": 0.383803732540855,
+    "hi": 0.8817588966335279
+   },
+   "twin": {
+    "tau": 0.7929574554121204,
+    "tauTeach": 0.7929574554121204,
+    "tauId": 0.8264921902553897,
+    "tauIdRule": "midpoint",
+    "keyframes": 32,
+    "bankRows": 1485,
+    "segmentsUsed": 5,
+    "framesKept": 37,
+    "calibrated": false,
+    "calValid": null
+   }
+  },
+  "TOP1_MEAN/CORESET/CANONICAL/CALIBRATED": {
+   "n": {
+    "good": 24,
+    "defect": 15,
+    "wrong": 12,
+    "rotated": 10,
+    "lookalike": 4
+   },
+   "auroc_defect": 1.0,
+   "auroc_identity": 1.0,
+   "auroc_identity_lookalike": 1.0,
+   "pass_good": {
+    "k": 24,
+    "n": 24,
+    "rate": 1.0,
+    "lo": 0.8575264022779265,
+    "hi": 1.0
+   },
+   "pass_rotated": {
+    "k": 10,
+    "n": 10,
+    "rate": 1.0,
+    "lo": 0.6915028921816884,
+    "hi": 1.0
+   },
+   "notenrolled_wrong": {
+    "k": 12,
+    "n": 12,
+    "rate": 1.0,
+    "lo": 0.7353515306026566,
+    "hi": 1.0
+   },
+   "notenrolled_lookalike": {
+    "k": 0,
+    "n": 4,
+    "rate": 0.0,
+    "lo": 0.0,
+    "hi": 0.6023646356165955
+   },
+   "defect_defect": {
+    "k": 10,
+    "n": 15,
+    "rate": 0.6666666666666666,
+    "lo": 0.383803732540855,
+    "hi": 0.8817588966335279
+   },
+   "twin": {
+    "tau": 0.7929574554121204,
+    "tauTeach": 0.7929574554121204,
+    "tauId": 0.8254734445367793,
+    "tauIdRule": "midpoint",
+    "keyframes": 32,
+    "bankRows": 1485,
+    "segmentsUsed": 5,
+    "framesKept": 37,
+    "calibrated": true,
+    "calValid": "24/24"
+   }
+  },
+  "TOP1_MEAN/TOPK_VIEWS/CANONICAL/LSO": {
+   "n": {
+    "good": 24,
+    "defect": 15,
+    "wrong": 12,
+    "rotated": 10,
+    "lookalike": 4
+   },
+   "auroc_defect": 1.0,
+   "auroc_identity": 1.0,
+   "auroc_identity_lookalike": 1.0,
+   "pass_good": {
+    "k": 24,
+    "n": 24,
+    "rate": 1.0,
+    "lo": 0.8575264022779265,
+    "hi": 1.0
+   },
+   "pass_rotated": {
+    "k": 10,
+    "n": 10,
+    "rate": 1.0,
+    "lo": 0.6915028921816884,
+    "hi": 1.0
+   },
+   "notenrolled_wrong": {
+    "k": 12,
+    "n": 12,
+    "rate": 1.0,
+    "lo": 0.7353515306026566,
+    "hi": 1.0
+   },
+   "notenrolled_lookalike": {
+    "k": 0,
+    "n": 4,
+    "rate": 0.0,
+    "lo": 0.0,
+    "hi": 0.6023646356165955
+   },
+   "defect_defect": {
+    "k": 10,
+    "n": 15,
+    "rate": 0.6666666666666666,
+    "lo": 0.383803732540855,
+    "hi": 0.8817588966335279
+   },
+   "twin": {
+    "tau": 0.7929574554121204,
+    "tauTeach": 0.7929574554121204,
+    "tauId": 0.8264921902553897,
+    "tauIdRule": "midpoint",
+    "keyframes": 32,
+    "bankRows": 1485,
+    "segmentsUsed": 5,
+    "framesKept": 37,
+    "calibrated": false,
+    "calValid": null
+   }
+  },
+  "TOP1_MEAN/TOPK_VIEWS/CANONICAL/CALIBRATED": {
+   "n": {
+    "good": 24,
+    "defect": 15,
+    "wrong": 12,
+    "rotated": 10,
+    "lookalike": 4
+   },
+   "auroc_defect": 1.0,
+   "auroc_identity": 1.0,
+   "auroc_identity_lookalike": 1.0,
+   "pass_good": {
+    "k": 24,
+    "n": 24,
+    "rate": 1.0,
+    "lo": 0.8575264022779265,
+    "hi": 1.0
+   },
+   "pass_rotated": {
+    "k": 10,
+    "n": 10,
+    "rate": 1.0,
+    "lo": 0.6915028921816884,
+    "hi": 1.0
+   },
+   "notenrolled_wrong": {
+    "k": 12,
+    "n": 12,
+    "rate": 1.0,
+    "lo": 0.7353515306026566,
+    "hi": 1.0
+   },
+   "notenrolled_lookalike": {
+    "k": 0,
+    "n": 4,
+    "rate": 0.0,
+    "lo": 0.0,
+    "hi": 0.6023646356165955
+   },
+   "defect_defect": {
+    "k": 10,
+    "n": 15,
+    "rate": 0.6666666666666666,
+    "lo": 0.383803732540855,
+    "hi": 0.8817588966335279
+   },
+   "twin": {
+    "tau": 0.7929574554121204,
+    "tauTeach": 0.7929574554121204,
+    "tauId": 0.8252126170244738,
+    "tauIdRule": "midpoint",
+    "keyframes": 32,
+    "bankRows": 1485,
+    "segmentsUsed": 5,
+    "framesKept": 37,
+    "calibrated": true,
+    "calValid": "24/24"
+   }
+  },
+  "SMOOTHED_MAX/CORESET/AUGMENT4/LSO": {
+   "n": {
+    "good": 24,
+    "defect": 15,
+    "wrong": 12,
+    "rotated": 10,
+    "lookalike": 4
+   },
+   "auroc_defect": 1.0,
+   "auroc_identity": 1.0,
+   "auroc_identity_lookalike": 1.0,
+   "pass_good": {
+    "k": 24,
+    "n": 24,
+    "rate": 1.0,
+    "lo": 0.8575264022779265,
+    "hi": 1.0
+   },
+   "pass_rotated": {
+    "k": 10,
+    "n": 10,
+    "rate": 1.0,
+    "lo": 0.6915028921816884,
+    "hi": 1.0
+   },
+   "notenrolled_wrong": {
+    "k": 12,
+    "n": 12,
+    "rate": 1.0,
+    "lo": 0.7353515306026566,
+    "hi": 1.0
+   },
+   "notenrolled_lookalike": {
+    "k": 1,
+    "n": 4,
+    "rate": 0.25,
+    "lo": 0.006309463210072863,
+    "hi": 0.8058795503170586
+   },
+   "defect_defect": {
+    "k": 9,
+    "n": 15,
+    "rate": 0.6,
+    "lo": 0.32286976620662244,
+    "hi": 0.836635676140304
+   },
+   "twin": {
+    "tau": 0.8234291472038745,
+    "tauTeach": 0.8234291472038745,
+    "tauId": 0.8007529745865969,
+    "tauIdRule": "midpoint",
+    "keyframes": 128,
+    "bankRows": 2400,
+    "segmentsUsed": 5,
+    "framesKept": 37,
+    "calibrated": false,
+    "calValid": null
+   }
+  },
+  "SMOOTHED_MAX/CORESET/AUGMENT4/CALIBRATED": {
+   "n": {
+    "good": 24,
+    "defect": 15,
+    "wrong": 12,
+    "rotated": 10,
+    "lookalike": 4
+   },
+   "auroc_defect": 1.0,
+   "auroc_identity": 1.0,
+   "auroc_identity_lookalike": 1.0,
+   "pass_good": {
+    "k": 24,
+    "n": 24,
+    "rate": 1.0,
+    "lo": 0.8575264022779265,
+    "hi": 1.0
+   },
+   "pass_rotated": {
+    "k": 10,
+    "n": 10,
+    "rate": 1.0,
+    "lo": 0.6915028921816884,
+    "hi": 1.0
+   },
+   "notenrolled_wrong": {
+    "k": 12,
+    "n": 12,
+    "rate": 1.0,
+    "lo": 0.7353515306026566,
+    "hi": 1.0
+   },
+   "notenrolled_lookalike": {
+    "k": 1,
+    "n": 4,
+    "rate": 0.25,
+    "lo": 0.006309463210072863,
+    "hi": 0.8058795503170586
+   },
+   "defect_defect": {
+    "k": 9,
+    "n": 15,
+    "rate": 0.6,
+    "lo": 0.32286976620662244,
+    "hi": 0.836635676140304
+   },
+   "twin": {
+    "tau": 0.8234291472038745,
+    "tauTeach": 0.8234291472038745,
+    "tauId": 0.8007803658778658,
+    "tauIdRule": "midpoint",
+    "keyframes": 128,
+    "bankRows": 2400,
+    "segmentsUsed": 5,
+    "framesKept": 37,
+    "calibrated": true,
+    "calValid": "24/24"
+   }
+  },
+  "SMOOTHED_MAX/TOPK_VIEWS/AUGMENT4/LSO": {
+   "n": {
+    "good": 24,
+    "defect": 15,
+    "wrong": 12,
+    "rotated": 10,
+    "lookalike": 4
+   },
+   "auroc_defect": 1.0,
+   "auroc_identity": 1.0,
+   "auroc_identity_lookalike": 1.0,
+   "pass_good": {
+    "k": 24,
+    "n": 24,
+    "rate": 1.0,
+    "lo": 0.8575264022779265,
+    "hi": 1.0
+   },
+   "pass_rotated": {
+    "k": 10,
+    "n": 10,
+    "rate": 1.0,
+    "lo": 0.6915028921816884,
+    "hi": 1.0
+   },
+   "notenrolled_wrong": {
+    "k": 12,
+    "n": 12,
+    "rate": 1.0,
+    "lo": 0.7353515306026566,
+    "hi": 1.0
+   },
+   "notenrolled_lookalike": {
+    "k": 1,
+    "n": 4,
+    "rate": 0.25,
+    "lo": 0.006309463210072863,
+    "hi": 0.8058795503170586
+   },
+   "defect_defect": {
+    "k": 10,
+    "n": 15,
+    "rate": 0.6666666666666666,
+    "lo": 0.383803732540855,
+    "hi": 0.8817588966335279
+   },
+   "twin": {
+    "tau": 0.8234291472038745,
+    "tauTeach": 0.8234291472038745,
+    "tauId": 0.8007529745865969,
+    "tauIdRule": "midpoint",
+    "keyframes": 128,
+    "bankRows": 2400,
+    "segmentsUsed": 5,
+    "framesKept": 37,
+    "calibrated": false,
+    "calValid": null
+   }
+  },
+  "SMOOTHED_MAX/TOPK_VIEWS/AUGMENT4/CALIBRATED": {
+   "n": {
+    "good": 24,
+    "defect": 15,
+    "wrong": 12,
+    "rotated": 10,
+    "lookalike": 4
+   },
+   "auroc_defect": 1.0,
+   "auroc_identity": 1.0,
+   "auroc_identity_lookalike": 1.0,
+   "pass_good": {
+    "k": 24,
+    "n": 24,
+    "rate": 1.0,
+    "lo": 0.8575264022779265,
+    "hi": 1.0
+   },
+   "pass_rotated": {
+    "k": 10,
+    "n": 10,
+    "rate": 1.0,
+    "lo": 0.6915028921816884,
+    "hi": 1.0
+   },
+   "notenrolled_wrong": {
+    "k": 12,
+    "n": 12,
+    "rate": 1.0,
+    "lo": 0.7353515306026566,
+    "hi": 1.0
+   },
+   "notenrolled_lookalike": {
+    "k": 1,
+    "n": 4,
+    "rate": 0.25,
+    "lo": 0.006309463210072863,
+    "hi": 0.8058795503170586
+   },
+   "defect_defect": {
+    "k": 10,
+    "n": 15,
+    "rate": 0.6666666666666666,
+    "lo": 0.383803732540855,
+    "hi": 0.8817588966335279
+   },
+   "twin": {
+    "tau": 0.8234291472038745,
+    "tauTeach": 0.8234291472038745,
+    "tauId": 0.8007803658778658,
+    "tauIdRule": "midpoint",
+    "keyframes": 128,
+    "bankRows": 2400,
+    "segmentsUsed": 5,
+    "framesKept": 37,
+    "calibrated": true,
+    "calValid": "24/24"
+   }
+  },
+  "TOP1_MEAN/CORESET/AUGMENT4/LSO": {
+   "n": {
+    "good": 24,
+    "defect": 15,
+    "wrong": 12,
+    "rotated": 10,
+    "lookalike": 4
+   },
+   "auroc_defect": 1.0,
+   "auroc_identity": 1.0,
+   "auroc_identity_lookalike": 1.0,
+   "pass_good": {
+    "k": 24,
+    "n": 24,
+    "rate": 1.0,
+    "lo": 0.8575264022779265,
+    "hi": 1.0
+   },
+   "pass_rotated": {
+    "k": 10,
+    "n": 10,
+    "rate": 1.0,
+    "lo": 0.6915028921816884,
+    "hi": 1.0
+   },
+   "notenrolled_wrong": {
+    "k": 12,
+    "n": 12,
+    "rate": 1.0,
+    "lo": 0.7353515306026566,
+    "hi": 1.0
+   },
+   "notenrolled_lookalike": {
+    "k": 1,
+    "n": 4,
+    "rate": 0.25,
+    "lo": 0.006309463210072863,
+    "hi": 0.8058795503170586
+   },
+   "defect_defect": {
+    "k": 4,
+    "n": 15,
+    "rate": 0.26666666666666666,
+    "lo": 0.07787154629068027,
+    "hi": 0.5510032410370513
+   },
+   "twin": {
+    "tau": 1.0139318603513092,
+    "tauTeach": 1.0139318603513092,
+    "tauId": 0.8007529745865969,
+    "tauIdRule": "midpoint",
+    "keyframes": 128,
+    "bankRows": 2400,
+    "segmentsUsed": 5,
+    "framesKept": 37,
+    "calibrated": false,
+    "calValid": null
+   }
+  },
+  "TOP1_MEAN/CORESET/AUGMENT4/CALIBRATED": {
+   "n": {
+    "good": 24,
+    "defect": 15,
+    "wrong": 12,
+    "rotated": 10,
+    "lookalike": 4
+   },
+   "auroc_defect": 1.0,
+   "auroc_identity": 1.0,
+   "auroc_identity_lookalike": 1.0,
+   "pass_good": {
+    "k": 24,
+    "n": 24,
+    "rate": 1.0,
+    "lo": 0.8575264022779265,
+    "hi": 1.0
+   },
+   "pass_rotated": {
+    "k": 10,
+    "n": 10,
+    "rate": 1.0,
+    "lo": 0.6915028921816884,
+    "hi": 1.0
+   },
+   "notenrolled_wrong": {
+    "k": 12,
+    "n": 12,
+    "rate": 1.0,
+    "lo": 0.7353515306026566,
+    "hi": 1.0
+   },
+   "notenrolled_lookalike": {
+    "k": 1,
+    "n": 4,
+    "rate": 0.25,
+    "lo": 0.006309463210072863,
+    "hi": 0.8058795503170586
+   },
+   "defect_defect": {
+    "k": 4,
+    "n": 15,
+    "rate": 0.26666666666666666,
+    "lo": 0.07787154629068027,
+    "hi": 0.5510032410370513
+   },
+   "twin": {
+    "tau": 1.0139318603513092,
+    "tauTeach": 1.0139318603513092,
+    "tauId": 0.8007803658778658,
+    "tauIdRule": "midpoint",
+    "keyframes": 128,
+    "bankRows": 2400,
+    "segmentsUsed": 5,
+    "framesKept": 37,
+    "calibrated": true,
+    "calValid": "24/24"
+   }
+  },
+  "TOP1_MEAN/TOPK_VIEWS/AUGMENT4/LSO": {
+   "n": {
+    "good": 24,
+    "defect": 15,
+    "wrong": 12,
+    "rotated": 10,
+    "lookalike": 4
+   },
+   "auroc_defect": 1.0,
+   "auroc_identity": 1.0,
+   "auroc_identity_lookalike": 1.0,
+   "pass_good": {
+    "k": 24,
+    "n": 24,
+    "rate": 1.0,
+    "lo": 0.8575264022779265,
+    "hi": 1.0
+   },
+   "pass_rotated": {
+    "k": 10,
+    "n": 10,
+    "rate": 1.0,
+    "lo": 0.6915028921816884,
+    "hi": 1.0
+   },
+   "notenrolled_wrong": {
+    "k": 12,
+    "n": 12,
+    "rate": 1.0,
+    "lo": 0.7353515306026566,
+    "hi": 1.0
+   },
+   "notenrolled_lookalike": {
+    "k": 1,
+    "n": 4,
+    "rate": 0.25,
+    "lo": 0.006309463210072863,
+    "hi": 0.8058795503170586
+   },
+   "defect_defect": {
+    "k": 5,
+    "n": 15,
+    "rate": 0.3333333333333333,
+    "lo": 0.11824110336647209,
+    "hi": 0.616196267459145
+   },
+   "twin": {
+    "tau": 1.0139318603513092,
+    "tauTeach": 1.0139318603513092,
+    "tauId": 0.8007529745865969,
+    "tauIdRule": "midpoint",
+    "keyframes": 128,
+    "bankRows": 2400,
+    "segmentsUsed": 5,
+    "framesKept": 37,
+    "calibrated": false,
+    "calValid": null
+   }
+  },
+  "TOP1_MEAN/TOPK_VIEWS/AUGMENT4/CALIBRATED": {
+   "n": {
+    "good": 24,
+    "defect": 15,
+    "wrong": 12,
+    "rotated": 10,
+    "lookalike": 4
+   },
+   "auroc_defect": 1.0,
+   "auroc_identity": 1.0,
+   "auroc_identity_lookalike": 1.0,
+   "pass_good": {
+    "k": 24,
+    "n": 24,
+    "rate": 1.0,
+    "lo": 0.8575264022779265,
+    "hi": 1.0
+   },
+   "pass_rotated": {
+    "k": 10,
+    "n": 10,
+    "rate": 1.0,
+    "lo": 0.6915028921816884,
+    "hi": 1.0
+   },
+   "notenrolled_wrong": {
+    "k": 12,
+    "n": 12,
+    "rate": 1.0,
+    "lo": 0.7353515306026566,
+    "hi": 1.0
+   },
+   "notenrolled_lookalike": {
+    "k": 1,
+    "n": 4,
+    "rate": 0.25,
+    "lo": 0.006309463210072863,
+    "hi": 0.8058795503170586
+   },
+   "defect_defect": {
+    "k": 5,
+    "n": 15,
+    "rate": 0.3333333333333333,
+    "lo": 0.11824110336647209,
+    "hi": 0.616196267459145
+   },
+   "twin": {
+    "tau": 1.0139318603513092,
+    "tauTeach": 1.0139318603513092,
+    "tauId": 0.8007803658778658,
+    "tauIdRule": "midpoint",
+    "keyframes": 128,
+    "bankRows": 2400,
+    "segmentsUsed": 5,
+    "framesKept": 37,
+    "calibrated": true,
+    "calValid": "24/24"
+   }
+  }
+ },
+ "parts": {
+  "parts/defect_0001": {
+   "label": "defect",
+   "phone": {
+    "verdict": "PASS",
+    "reason": null,
+    "raw": 0.8408796717933023,
+    "s": 0.9810134931867156,
+    "sim": 0.9968595235214326,
+    "a": 0.0,
+    "peak": [
+     20,
+     19
+    ],
+    "ms": null
+   },
+   "default": {
+    "verdict": "DEFECT",
+    "reason": null,
+    "s": 1.2663459314970622,
+    "raw": 0.9636657935749555,
+    "sim": 0.9639685394630192,
+    "a": 0.05172413793103448
+   },
+   "winner": {
+    "verdict": "DEFECT",
+    "reason": null,
+    "s": 1.2663459314970622,
+    "raw": 0.9636657935749555,
+    "sim": 0.9639685394630192,
+    "a": 0.05172413793103448
+   }
+  },
+  "parts/defect_0002": {
+   "label": "defect",
+   "phone": {
+    "verdict": "DEFECT",
+    "reason": null,
+    "raw": 1.0278794781759775,
+    "s": 1.1991770895232454,
+    "sim": 0.992412604148848,
+    "a": 0.025943396226415096,
+    "peak": [
+     23,
+     17
+    ],
+    "ms": null
+   },
+   "default": {
+    "verdict": "DEFECT",
+    "reason": null,
+    "s": 1.2593124526619117,
+    "raw": 0.958313446483466,
+    "sim": 0.956232117556288,
+    "a": 0.03018867924528302
+   },
+   "winner": {
+    "verdict": "DEFECT",
+    "reason": null,
+    "s": 1.2593124526619117,
+    "raw": 0.958313446483466,
+    "sim": 0.956232117556288,
+    "a": 0.03018867924528302
+   }
+  },
+  "parts/defect_0003": {
+   "label": "defect",
+   "phone": {
+    "verdict": "PASS",
+    "reason": null,
+    "raw": 0.8349538963308534,
+    "s": 0.9741001786171537,
+    "sim": 0.9928262423623052,
+    "a": 0.0,
+    "peak": [
+     19,
+     16
+    ],
+    "ms": null
+   },
+   "default": {
+    "verdict": "PASS",
+    "reason": null,
+    "s": 0.7656498214836871,
+    "raw": 0.5826453297388843,
+    "sim": 0.9837016980621415,
+    "a": 0.0
+   },
+   "winner": {
+    "verdict": "PASS",
+    "reason": null,
+    "s": 0.7656498214836871,
+    "raw": 0.5826453297388843,
+    "sim": 0.9837016980621415,
+    "a": 0.0
+   }
+  },
+  "parts/defect_0004": {
+   "label": "defect",
+   "phone": {
+    "verdict": "DEFECT",
+    "reason": null,
+    "raw": 0.8688807002366905,
+    "s": 1.013680933781975,
+    "sim": 0.9910490327493536,
+    "a": 0.006864988558352402,
+    "peak": [
+     18,
+     21
+    ],
+    "ms": null
+   },
+   "default": {
+    "verdict": "DEFECT",
+    "reason": null,
+    "s": 1.1440351568130929,
+    "raw": 0.8705895599669287,
+    "sim": 0.9654013437544908,
+    "a": 0.035842293906810034
+   },
+   "winner": {
+    "verdict": "DEFECT",
+    "reason": null,
+    "s": 1.1440351568130929,
+    "raw": 0.8705895599669287,
+    "sim": 0.9654013437544908,
+    "a": 0.035842293906810034
+   }
+  },
+  "parts/defect_0005": {
+   "label": "defect",
+   "phone": {
+    "verdict": "DEFECT",
+    "reason": null,
+    "raw": 0.9678653417540954,
+    "s": 1.1291615099026138,
+    "sim": 0.9939405541576841,
+    "a": 0.023094688221709007,
+    "peak": [
+     16,
+     22
+    ],
+    "ms": null
+   },
+   "default": {
+    "verdict": "DEFECT",
+    "reason": null,
+    "s": 1.2209068752036822,
+    "raw": 0.9290875135385589,
+    "sim": 0.9697999700474995,
+    "a": 0.011363636363636364
+   },
+   "winner": {
+    "verdict": "DEFECT",
+    "reason": null,
+    "s": 1.2209068752036822,
+    "raw": 0.9290875135385589,
+    "sim": 0.9697999700474995,
+    "a": 0.011363636363636364
+   }
+  },
+  "parts/defect_0006": {
+   "label": "defect",
+   "phone": {
+    "verdict": "DEFECT",
+    "reason": null,
+    "raw": 0.8892766265490601,
+    "s": 1.0374758709051488,
+    "sim": 0.9974958458143806,
+    "a": 0.008888888888888889,
+    "peak": [
+     19,
+     17
+    ],
+    "ms": null
+   },
+   "default": {
+    "verdict": "PASS",
+    "reason": null,
+    "s": 0.9218851696478961,
+    "raw": 0.7015375352795401,
+    "sim": 0.9695054629746821,
+    "a": 0.0
+   },
+   "winner": {
+    "verdict": "PASS",
+    "reason": null,
+    "s": 0.9218851696478961,
+    "raw": 0.7015375352795401,
+    "sim": 0.9695054629746821,
+    "a": 0.0
+   }
+  },
+  "parts/defect_0007": {
+   "label": "defect",
+   "phone": {
+    "verdict": "DEFECT",
+    "reason": null,
+    "raw": 0.874925995338553,
+    "s": 1.0207336861128464,
+    "sim": 0.9956666847838501,
+    "a": 0.004454342984409799,
+    "peak": [
+     23,
+     19
+    ],
+    "ms": null
+   },
+   "default": {
+    "verdict": "DEFECT",
+    "reason": null,
+    "s": 1.1148124042477112,
+    "raw": 0.8483515866446854,
+    "sim": 0.9730666353180562,
+    "a": 0.014336917562724014
+   },
+   "winner": {
+    "verdict": "DEFECT",
+    "reason": null,
+    "s": 1.1148124042477112,
+    "raw": 0.8483515866446854,
+    "sim": 0.9730666353180562,
+    "a": 0.014336917562724014
+   }
+  },
+  "parts/defect_0008": {
+   "label": "defect",
+   "phone": {
+    "verdict": "DEFECT",
+    "reason": null,
+    "raw": 1.0052183165492767,
+    "s": 1.172739412323049,
+    "sim": 0.9973849910694879,
+    "a": 0.027972027972027972,
+    "peak": [
+     24,
+     17
+    ],
+    "ms": null
+   },
+   "default": {
+    "verdict": "DEFECT",
+    "reason": null,
+    "s": 1.2263023013962897,
+    "raw": 0.933193332915597,
+    "sim": 0.9499892063744559,
+    "a": 0.022556390977443608
+   },
+   "winner": {
+    "verdict": "DEFECT",
+    "reason": null,
+    "s": 1.2263023013962897,
+    "raw": 0.933193332915597,
+    "sim": 0.9499892063744559,
+    "a": 0.022556390977443608
+   }
+  },
+  "parts/defect_0009": {
+   "label": "defect",
+   "phone": {
+    "verdict": "PASS",
+    "reason": null,
+    "raw": 0.7851554376983602,
+    "s": 0.9160027343607239,
+    "sim": 0.9985273587584759,
+    "a": 0.0,
+    "peak": [
+     19,
+     19
+    ],
+    "ms": null
+   },
+   "default": {
+    "verdict": "PASS",
+    "reason": null,
+    "s": 0.8078015988716463,
+    "raw": 0.6147220514283058,
+    "sim": 0.967318551551644,
+    "a": 0.0
+   },
+   "winner": {
+    "verdict": "PASS",
+    "reason": null,
+    "s": 0.8078015988716463,
+    "raw": 0.6147220514283058,
+    "sim": 0.967318551551644,
+    "a": 0.0
+   }
+  },
+  "parts/defect_0010": {
+   "label": "defect",
+   "phone": {
+    "verdict": "PASS",
+    "reason": null,
+    "raw": 0.8185655489000029,
+    "s": 0.9549806892300347,
+    "sim": 0.9916049497176679,
+    "a": 0.0,
+    "peak": [
+     20,
+     18
+    ],
+    "ms": null
+   },
+   "default": {
+    "verdict": "DEFECT",
+    "reason": null,
+    "s": 1.1741460525318133,
+    "raw": 0.8935033937751441,
+    "sim": 0.9521053169045507,
+    "a": 0.039711191335740074
+   },
+   "winner": {
+    "verdict": "DEFECT",
+    "reason": null,
+    "s": 1.1741460525318133,
+    "raw": 0.8935033937751441,
+    "sim": 0.9521053169045507,
+    "a": 0.039711191335740074
+   }
+  },
+  "parts/defect_0011": {
+   "label": "defect",
+   "phone": {
+    "verdict": "DEFECT",
+    "reason": null,
+    "raw": 0.9920402398247177,
+    "s": 1.1573651899286943,
+    "sim": 0.9910087991627585,
+    "a": 0.028503562945368172,
+    "peak": [
+     16,
+     18
+    ],
+    "ms": null
+   },
+   "default": {
+    "verdict": "DEFECT",
+    "reason": null,
+    "s": 1.274152550856348,
+    "raw": 0.9696064862821293,
+    "sim": 0.9568830111022059,
+    "a": 0.030303030303030304
+   },
+   "winner": {
+    "verdict": "DEFECT",
+    "reason": null,
+    "s": 1.274152550856348,
+    "raw": 0.9696064862821293,
+    "sim": 0.9568830111022059,
+    "a": 0.030303030303030304
+   }
+  },
+  "parts/defect_0012": {
+   "label": "defect",
+   "phone": {
+    "verdict": "PASS",
+    "reason": null,
+    "raw": 0.8519682940897633,
+    "s": 0.9939500505308599,
+    "sim": 0.9947493949494837,
+    "a": 0.0,
+    "peak": [
+     20,
+     22
+    ],
+    "ms": null
+   },
+   "default": {
+    "verdict": "PASS",
+    "reason": null,
+    "s": 0.8782805857081173,
+    "raw": 0.668355254718843,
+    "sim": 0.9812127281571039,
+    "a": 0.0
+   },
+   "winner": {
+    "verdict": "PASS",
+    "reason": null,
+    "s": 0.8782805857081173,
+    "raw": 0.668355254718843,
+    "sim": 0.9812127281571039,
+    "a": 0.0
+   }
+  },
+  "parts/defect_0013": {
+   "label": "defect",
+   "phone": {
+    "verdict": "DEFECT",
+    "reason": null,
+    "raw": 0.8788777585946393,
+    "s": 1.025344016468238,
+    "sim": 0.9956725354872595,
+    "a": 0.024719101123595506,
+    "peak": [
+     19,
+     20
+    ],
+    "ms": null
+   },
+   "default": {
+    "verdict": "DEFECT",
+    "reason": null,
+    "s": 1.2586276357799557,
+    "raw": 0.9577923135231986,
+    "sim": 0.9406999916366772,
+    "a": 0.04513888888888889
+   },
+   "winner": {
+    "verdict": "DEFECT",
+    "reason": null,
+    "s": 1.2586276357799557,
+    "raw": 0.9577923135231986,
+    "sim": 0.9406999916366772,
+    "a": 0.04513888888888889
+   }
+  },
+  "parts/defect_0014": {
+   "label": "defect",
+   "phone": {
+    "verdict": "DEFECT",
+    "reason": null,
+    "raw": 1.0351446731527254,
+    "s": 1.20765303981899,
+    "sim": 0.9975415002737209,
+    "a": 0.02857142857142857,
+    "peak": [
+     23,
+     20
+    ],
+    "ms": null
+   },
+   "default": {
+    "verdict": "DEFECT",
+    "reason": null,
+    "s": 1.2510189128058198,
+    "raw": 0.9520022162989003,
+    "sim": 0.9391272566382854,
+    "a": 0.033962264150943396
+   },
+   "winner": {
+    "verdict": "DEFECT",
+    "reason": null,
+    "s": 1.2510189128058198,
+    "raw": 0.9520022162989003,
+    "sim": 0.9391272566382854,
+    "a": 0.033962264150943396
+   }
+  },
+  "parts/defect_0015": {
+   "label": "defect",
+   "phone": {
+    "verdict": "DEFECT",
+    "reason": null,
+    "raw": 0.9330071949229871,
+    "s": 1.0884942021582462,
+    "sim": 0.9963891353850245,
+    "a": 0.01411764705882353,
+    "peak": [
+     20,
+     16
+    ],
+    "ms": null
+   },
+   "default": {
+    "verdict": "PASS",
+    "reason": null,
+    "s": 0.9150998169835507,
+    "raw": 0.6963740076072537,
+    "sim": 0.9758304094514156,
+    "a": 0.0
+   },
+   "winner": {
+    "verdict": "PASS",
+    "reason": null,
+    "s": 0.9150998169835507,
+    "raw": 0.6963740076072537,
+    "sim": 0.9758304094514156,
+    "a": 0.0
+   }
+  },
+  "parts/good_0001": {
+   "label": "good",
+   "phone": {
+    "verdict": "PASS",
+    "reason": null,
+    "raw": 0.38485833624125604,
+    "s": 0.4489955382235337,
+    "sim": 0.9984936705881077,
+    "a": 0.0,
+    "peak": [
+     13,
+     12
+    ],
+    "ms": null
+   },
+   "default": {
+    "verdict": "PASS",
+    "reason": null,
+    "s": 0.41186220007892727,
+    "raw": 0.3134195041108381,
+    "sim": 0.9964600157631316,
+    "a": 0.0
+   },
+   "winner": {
+    "verdict": "PASS",
+    "reason": null,
+    "s": 0.41186220007892727,
+    "raw": 0.3134195041108381,
+    "sim": 0.9964600157631316,
+    "a": 0.0
+   }
+  },
+  "parts/good_0002": {
+   "label": "good",
+   "phone": {
+    "verdict": "PASS",
+    "reason": null,
+    "raw": 0.3914815431840368,
+    "s": 0.45672251224489285,
+    "sim": 0.9974558037169645,
+    "a": 0.0,
+    "peak": [
+     14,
+     13
+    ],
+    "ms": null
+   },
+   "default": {
+    "verdict": "PASS",
+    "reason": null,
+    "s": 0.42742926191802605,
+    "raw": 0.32526574977537853,
+    "sim": 0.9963587176427114,
+    "a": 0.0
+   },
+   "winner": {
+    "verdict": "PASS",
+    "reason": null,
+    "s": 0.42742926191802605,
+    "raw": 0.32526574977537853,
+    "sim": 0.9963587176427114,
+    "a": 0.0
+   }
+  },
+  "parts/good_0003": {
+   "label": "good",
+   "phone": {
+    "verdict": "PASS",
+    "reason": null,
+    "raw": 0.46403297760222956,
+    "s": 0.5413647488237712,
+    "sim": 0.9930422451474549,
+    "a": 0.0,
+    "peak": [
+     13,
+     25
+    ],
+    "ms": null
+   },
+   "default": {
+    "verdict": "PASS",
+    "reason": null,
+    "s": 0.39859959910870846,
+    "raw": 0.30332691047512855,
+    "sim": 0.9947518164291536,
+    "a": 0.0
+   },
+   "winner": {
+    "verdict": "PASS",
+    "reason": null,
+    "s": 0.39859959910870846,
+    "raw": 0.30332691047512855,
+    "sim": 0.9947518164291536,
+    "a": 0.0
+   }
+  },
+  "parts/good_0004": {
+   "label": "good",
+   "phone": {
+    "verdict": "PASS",
+    "reason": null,
+    "raw": 0.48908993364653014,
+    "s": 0.5705974830688768,
+    "sim": 0.9936382475284334,
+    "a": 0.0,
+    "peak": [
+     13,
+     23
+    ],
+    "ms": null
+   },
+   "default": {
+    "verdict": "PASS",
+    "reason": null,
+    "s": 0.4225619713815868,
+    "raw": 0.3215618318484558,
+    "sim": 0.9947414840752371,
+    "a": 0.0
+   },
+   "winner": {
+    "verdict": "PASS",
+    "reason": null,
+    "s": 0.4225619713815868,
+    "raw": 0.3215618318484558,
+    "sim": 0.9947414840752371,
+    "a": 0.0
+   }
+  },
+  "parts/good_0005": {
+   "label": "good",
+   "phone": {
+    "verdict": "PASS",
+    "reason": null,
+    "raw": 0.3499569913530877,
+    "s": 0.40827783340301266,
+    "sim": 0.9994984843905009,
+    "a": 0.0,
+    "peak": [
+     12,
+     22
+    ],
+    "ms": null
+   },
+   "default": {
+    "verdict": "PASS",
+    "reason": null,
+    "s": 0.3742260789796316,
+    "raw": 0.28477911320014954,
+    "sim": 0.998229860250675,
+    "a": 0.0
+   },
+   "winner": {
+    "verdict": "PASS",
+    "reason": null,
+    "s": 0.3742260789796316,
+    "raw": 0.28477911320014954,
+    "sim": 0.998229860250675,
+    "a": 0.0
+   }
+  },
+  "parts/good_0006": {
+   "label": "good",
+   "phone": {
+    "verdict": "PASS",
+    "reason": null,
+    "raw": 0.37956958195356705,
+    "s": 0.44282540533483267,
+    "sim": 0.9990602978904787,
+    "a": 0.0,
+    "peak": [
+     14,
+     32
+    ],
+    "ms": null
+   },
+   "default": {
+    "verdict": "PASS",
+    "reason": null,
+    "s": 0.49010741373554034,
+    "raw": 0.3729626621345719,
+    "sim": 0.9930693554001044,
+    "a": 0.0
+   },
+   "winner": {
+    "verdict": "PASS",
+    "reason": null,
+    "s": 0.49010741373554034,
+    "raw": 0.3729626621345719,
+    "sim": 0.9930693554001044,
+    "a": 0.0
+   }
+  },
+  "parts/good_0007": {
+   "label": "good",
+   "phone": {
+    "verdict": "PASS",
+    "reason": null,
+    "raw": 0.32970732165170513,
+    "s": 0.3846535267679563,
+    "sim": 0.9995346581520231,
+    "a": 0.0,
+    "peak": [
+     28,
+     25
+    ],
+    "ms": null
+   },
+   "default": {
+    "verdict": "PASS",
+    "reason": null,
+    "s": 0.36873113155602355,
+    "raw": 0.28059756001004776,
+    "sim": 0.9979433400116086,
+    "a": 0.0
+   },
+   "winner": {
+    "verdict": "PASS",
+    "reason": null,
+    "s": 0.36873113155602355,
+    "raw": 0.28059756001004776,
+    "sim": 0.9979433400116086,
+    "a": 0.0
+   }
+  },
+  "parts/good_0008": {
+   "label": "good",
+   "phone": {
+    "verdict": "PASS",
+    "reason": null,
+    "raw": 0.4194135868787415,
+    "s": 0.4893094716826778,
+    "sim": 0.997070312739128,
+    "a": 0.0,
+    "peak": [
+     14,
+     11
+    ],
+    "ms": null
+   },
+   "default": {
+    "verdict": "PASS",
+    "reason": null,
+    "s": 0.4072151094971498,
+    "raw": 0.3098831542699939,
+    "sim": 0.9960181646936467,
+    "a": 0.0
+   },
+   "winner": {
+    "verdict": "PASS",
+    "reason": null,
+    "s": 0.4072151094971498,
+    "raw": 0.3098831542699939,
+    "sim": 0.9960181646936467,
+    "a": 0.0
+   }
+  },
+  "parts/good_0009": {
+   "label": "good",
+   "phone": {
+    "verdict": "PASS",
+    "reason": null,
+    "raw": 0.4843276827725004,
+    "s": 0.5650415961541652,
+    "sim": 0.9935968153321788,
+    "a": 0.0,
+    "peak": [
+     14,
+     14
+    ],
+    "ms": null
+   },
+   "default": {
+    "verdict": "PASS",
+    "reason": null,
+    "s": 0.41258362607536897,
+    "raw": 0.31396849592900955,
+    "sim": 0.9938287069808455,
+    "a": 0.0
+   },
+   "winner": {
+    "verdict": "PASS",
+    "reason": null,
+    "s": 0.41258362607536897,
+    "raw": 0.31396849592900955,
+    "sim": 0.9938287069808455,
+    "a": 0.0
+   }
+  },
+  "parts/good_0010": {
+   "label": "good",
+   "phone": {
+    "verdict": "PASS",
+    "reason": null,
+    "raw": 0.3380542524108458,
+    "s": 0.39439148568893856,
+    "sim": 0.9995634147065111,
+    "a": 0.0,
+    "peak": [
+     12,
+     18
+    ],
+    "ms": null
+   },
+   "default": {
+    "verdict": "PASS",
+    "reason": null,
+    "s": 0.46065280968962546,
+    "raw": 0.3505482541309177,
+    "sim": 0.993365373718904,
+    "a": 0.0
+   },
+   "winner": {
+    "verdict": "PASS",
+    "reason": null,
+    "s": 0.46065280968962546,
+    "raw": 0.3505482541309177,
+    "sim": 0.993365373718904,
+    "a": 0.0
+   }
+  },
+  "parts/good_0011": {
+   "label": "good",
+   "phone": {
+    "verdict": "PASS",
+    "reason": null,
+    "raw": 0.4913551830056826,
+    "s": 0.5732402395313109,
+    "sim": 0.9957408169263777,
+    "a": 0.0,
+    "peak": [
+     13,
+     13
+    ],
+    "ms": null
+   },
+   "default": {
+    "verdict": "PASS",
+    "reason": null,
+    "s": 0.4245122292002591,
+    "raw": 0.323045941918036,
+    "sim": 0.9926177327737427,
+    "a": 0.0
+   },
+   "winner": {
+    "verdict": "PASS",
+    "reason": null,
+    "s": 0.4245122292002591,
+    "raw": 0.323045941918036,
+    "sim": 0.9926177327737427,
+    "a": 0.0
+   }
+  },
+  "parts/good_0012": {
+   "label": "good",
+   "phone": {
+    "verdict": "PASS",
+    "reason": null,
+    "raw": 0.34569245352064565,
+    "s": 0.40330260413280233,
+    "sim": 0.9996853728933607,
+    "a": 0.0,
+    "peak": [
+     12,
+     25
+    ],
+    "ms": null
+   },
+   "default": {
+    "verdict": "PASS",
+    "reason": null,
+    "s": 0.40165958417968173,
+    "raw": 0.3056555024249293,
+    "sim": 0.9980140094830483,
+    "a": 0.0
+   },
+   "winner": {
+    "verdict": "PASS",
+    "reason": null,
+    "s": 0.40165958417968173,
+    "raw": 0.3056555024249293,
+    "sim": 0.9980140094830483,
+    "a": 0.0
+   }
+  },
+  "parts/good_0013": {
+   "label": "good",
+   "phone": {
+    "verdict": "PASS",
+    "reason": null,
+    "raw": 0.3995056558138724,
+    "s": 0.4660838549253871,
+    "sim": 0.99639008675623,
+    "a": 0.0,
+    "peak": [
+     13,
+     27
+    ],
+    "ms": null
+   },
+   "default": {
+    "verdict": "PASS",
+    "reason": null,
+    "s": 0.40169068027659416,
+    "raw": 0.3056791659785941,
+    "sim": 0.9968084176483969,
+    "a": 0.0
+   },
+   "winner": {
+    "verdict": "PASS",
+    "reason": null,
+    "s": 0.40169068027659416,
+    "raw": 0.3056791659785941,
+    "sim": 0.9968084176483969,
+    "a": 0.0
+   }
+  },
+  "parts/good_0014": {
+   "label": "good",
+   "phone": {
+    "verdict": "PASS",
+    "reason": null,
+    "raw": 0.46688960145721253,
+    "s": 0.5446974332026441,
+    "sim": 0.9945209445126163,
+    "a": 0.0,
+    "peak": [
+     27,
+     15
+    ],
+    "ms": null
+   },
+   "default": {
+    "verdict": "PASS",
+    "reason": null,
+    "s": 0.43776550218789895,
+    "raw": 0.33313143713181287,
+    "sim": 0.9967597098630782,
+    "a": 0.0
+   },
+   "winner": {
+    "verdict": "PASS",
+    "reason": null,
+    "s": 0.43776550218789895,
+    "raw": 0.33313143713181287,
+    "sim": 0.9967597098630782,
+    "a": 0.0
+   }
+  },
+  "parts/good_0015": {
+   "label": "good",
+   "phone": {
+    "verdict": "PASS",
+    "reason": null,
+    "raw": 0.41260091161789014,
+    "s": 0.4813614541722279,
+    "sim": 0.9970834959879482,
+    "a": 0.0,
+    "peak": [
+     13,
+     13
+    ],
+    "ms": null
+   },
+   "default": {
+    "verdict": "PASS",
+    "reason": null,
+    "s": 0.4120550784565167,
+    "raw": 0.31356628098292344,
+    "sim": 0.9964750138767831,
+    "a": 0.0
+   },
+   "winner": {
+    "verdict": "PASS",
+    "reason": null,
+    "s": 0.4120550784565167,
+    "raw": 0.31356628098292344,
+    "sim": 0.9964750138767831,
+    "a": 0.0
+   }
+  },
+  "parts/good_0016": {
+   "label": "good",
+   "phone": {
+    "verdict": "PASS",
+    "reason": null,
+    "raw": 0.3236980384908496,
+    "s": 0.37764278782048405,
+    "sim": 0.9996350763489755,
+    "a": 0.0,
+    "peak": [
+     22,
+     30
+    ],
+    "ms": null
+   },
+   "default": {
+    "verdict": "PASS",
+    "reason": null,
+    "s": 0.4586463711981008,
+    "raw": 0.34902139161009876,
+    "sim": 0.9957711172181593,
+    "a": 0.0
+   },
+   "winner": {
+    "verdict": "PASS",
+    "reason": null,
+    "s": 0.4586463711981008,
+    "raw": 0.34902139161009876,
+    "sim": 0.9957711172181593,
+    "a": 0.0
+   }
+  },
+  "parts/good_0017": {
+   "label": "good",
+   "phone": {
+    "verdict": "PASS",
+    "reason": null,
+    "raw": 0.3336899674986189,
+    "s": 0.389299886342893,
+    "sim": 0.9997543203149485,
+    "a": 0.0,
+    "peak": [
+     26,
+     25
+    ],
+    "ms": null
+   },
+   "default": {
+    "verdict": "PASS",
+    "reason": null,
+    "s": 0.3747404852891789,
+    "raw": 0.2851705668718361,
+    "sim": 0.9981875346364734,
+    "a": 0.0
+   },
+   "winner": {
+    "verdict": "PASS",
+    "reason": null,
+    "s": 0.3747404852891789,
+    "raw": 0.2851705668718361,
+    "sim": 0.9981875346364734,
+    "a": 0.0
+   }
+  },
+  "parts/good_0018": {
+   "label": "good",
+   "phone": {
+    "verdict": "PASS",
+    "reason": null,
+    "raw": 0.3859376699072123,
+    "s": 0.45025474441613395,
+    "sim": 0.9991466732186928,
+    "a": 0.0,
+    "peak": [
+     25,
+     19
+    ],
+    "ms": null
+   },
+   "default": {
+    "verdict": "PASS",
+    "reason": null,
+    "s": 0.5340260842488419,
+    "raw": 0.4063839567589594,
+    "sim": 0.9868182670282493,
+    "a": 0.0
+   },
+   "winner": {
+    "verdict": "PASS",
+    "reason": null,
+    "s": 0.5340260842488419,
+    "raw": 0.4063839567589594,
+    "sim": 0.9868182670282493,
+    "a": 0.0
+   }
+  },
+  "parts/good_0019": {
+   "label": "good",
+   "phone": {
+    "verdict": "PASS",
+    "reason": null,
+    "raw": 0.3498365769680173,
+    "s": 0.4081373517853801,
+    "sim": 0.9994384860307316,
+    "a": 0.0,
+    "peak": [
+     26,
+     25
+    ],
+    "ms": null
+   },
+   "default": {
+    "verdict": "PASS",
+    "reason": null,
+    "s": 0.4012303822964529,
+    "raw": 0.30532888774317596,
+    "sim": 0.9983357138280051,
+    "a": 0.0
+   },
+   "winner": {
+    "verdict": "PASS",
+    "reason": null,
+    "s": 0.4012303822964529,
+    "raw": 0.30532888774317596,
+    "sim": 0.9983357138280051,
+    "a": 0.0
+   }
+  },
+  "parts/good_0020": {
+   "label": "good",
+   "phone": {
+    "verdict": "PASS",
+    "reason": null,
+    "raw": 0.49271801614031824,
+    "s": 0.5748301907917429,
+    "sim": 0.9943889573364814,
+    "a": 0.0,
+    "peak": [
+     12,
+     23
+    ],
+    "ms": null
+   },
+   "default": {
+    "verdict": "PASS",
+    "reason": null,
+    "s": 0.42543893848303277,
+    "raw": 0.3237511505140328,
+    "sim": 0.9953084657853039,
+    "a": 0.0
+   },
+   "winner": {
+    "verdict": "PASS",
+    "reason": null,
+    "s": 0.42543893848303277,
+    "raw": 0.3237511505140328,
+    "sim": 0.9953084657853039,
+    "a": 0.0
+   }
+  },
+  "parts/good_0021": {
+   "label": "good",
+   "phone": {
+    "verdict": "PASS",
+    "reason": null,
+    "raw": 0.4798033912463753,
+    "s": 0.5597633248590898,
+    "sim": 0.9973014792583792,
+    "a": 0.0,
+    "peak": [
+     11,
+     23
+    ],
+    "ms": null
+   },
+   "default": {
+    "verdict": "PASS",
+    "reason": null,
+    "s": 0.41919222590738914,
+    "raw": 0.31899751797041515,
+    "sim": 0.996098794665931,
+    "a": 0.0
+   },
+   "winner": {
+    "verdict": "PASS",
+    "reason": null,
+    "s": 0.41919222590738914,
+    "raw": 0.31899751797041515,
+    "sim": 0.996098794665931,
+    "a": 0.0
+   }
+  },
+  "parts/good_0022": {
+   "label": "good",
+   "phone": {
+    "verdict": "PASS",
+    "reason": null,
+    "raw": 0.3420798197840927,
+    "s": 0.3990879197250537,
+    "sim": 0.999539194195817,
+    "a": 0.0,
+    "peak": [
+     14,
+     17
+    ],
+    "ms": null
+   },
+   "default": {
+    "verdict": "PASS",
+    "reason": null,
+    "s": 0.4060403826894323,
+    "raw": 0.30898920893228154,
+    "sim": 0.9975759714829825,
+    "a": 0.0
+   },
+   "winner": {
+    "verdict": "PASS",
+    "reason": null,
+    "s": 0.4060403826894323,
+    "raw": 0.30898920893228154,
+    "sim": 0.9975759714829825,
+    "a": 0.0
+   }
+  },
+  "parts/good_0023": {
+   "label": "good",
+   "phone": {
+    "verdict": "PASS",
+    "reason": null,
+    "raw": 0.3342336221203133,
+    "s": 0.3899341417987041,
+    "sim": 0.9993649922275116,
+    "a": 0.0,
+    "peak": [
+     28,
+     26
+    ],
+    "ms": null
+   },
+   "default": {
+    "verdict": "PASS",
+    "reason": null,
+    "s": 0.38280281167553326,
+    "raw": 0.2913058478893868,
+    "sim": 0.9978872636579618,
+    "a": 0.0
+   },
+   "winner": {
+    "verdict": "PASS",
+    "reason": null,
+    "s": 0.38280281167553326,
+    "raw": 0.2913058478893868,
+    "sim": 0.9978872636579618,
+    "a": 0.0
+   }
+  },
+  "parts/good_0024": {
+   "label": "good",
+   "phone": {
+    "verdict": "PASS",
+    "reason": null,
+    "raw": 0.3662265512043723,
+    "s": 0.42725873908750917,
+    "sim": 0.9989646167956463,
+    "a": 0.0,
+    "peak": [
+     11,
+     11
+    ],
+    "ms": null
+   },
+   "default": {
+    "verdict": "PASS",
+    "reason": null,
+    "s": 0.5226034713638092,
+    "raw": 0.39769155996850153,
+    "sim": 0.9881722665718558,
+    "a": 0.0
+   },
+   "winner": {
+    "verdict": "PASS",
+    "reason": null,
+    "s": 0.5226034713638092,
+    "raw": 0.39769155996850153,
+    "sim": 0.9881722665718558,
+    "a": 0.0
+   }
+  },
+  "parts/look_0001": {
+   "label": "lookalike",
+   "phone": {
+    "verdict": "NOT_ENROLLED",
+    "reason": "IDENTITY",
+    "raw": 1.2196249238882189,
+    "s": 1.4228771928919566,
+    "sim": 0.903695681998692,
+    "a": 0.7171492204899778,
+    "peak": [
+     18,
+     21
+    ],
+    "ms": null
+   },
+   "default": {
+    "verdict": "DEFECT",
+    "reason": null,
+    "s": 1.2772254491307884,
+    "raw": 0.9719449049405389,
+    "sim": 0.8331945502731845,
+    "a": 0.060714285714285714
+   },
+   "winner": {
+    "verdict": "DEFECT",
+    "reason": null,
+    "s": 1.2772254491307884,
+    "raw": 0.9719449049405389,
+    "sim": 0.8331945502731845,
+    "a": 0.060714285714285714
+   }
+  },
+  "parts/look_0002": {
+   "label": "lookalike",
+   "phone": {
+    "verdict": "NOT_ENROLLED",
+    "reason": "IDENTITY",
+    "raw": 1.2224051293238136,
+    "s": 1.4261207236106062,
+    "sim": 0.8994963900642328,
+    "a": 0.755939524838013,
+    "peak": [
+     16,
+     6
+    ],
+    "ms": null
+   },
+   "default": {
+    "verdict": "DEFECT",
+    "reason": null,
+    "s": 1.303567116675154,
+    "raw": 0.9919904259367007,
+    "sim": 0.8242199724475692,
+    "a": 0.06506849315068493
+   },
+   "winner": {
+    "verdict": "DEFECT",
+    "reason": null,
+    "s": 1.303567116675154,
+    "raw": 0.9919904259367007,
+    "sim": 0.8242199724475692,
+    "a": 0.06506849315068493
+   }
+  },
+  "parts/look_0003": {
+   "label": "lookalike",
+   "phone": {
+    "verdict": "NOT_ENROLLED",
+    "reason": "IDENTITY",
+    "raw": 1.2545783978617944,
+    "s": 1.4636557141858537,
+    "sim": 0.8959683592866486,
+    "a": 0.785876993166287,
+    "peak": [
+     15,
+     7
+    ],
+    "ms": null
+   },
+   "default": {
+    "verdict": "DEFECT",
+    "reason": null,
+    "s": 1.3080641817473675,
+    "raw": 0.9954126091441358,
+    "sim": 0.806572172708325,
+    "a": 0.08620689655172414
+   },
+   "winner": {
+    "verdict": "DEFECT",
+    "reason": null,
+    "s": 1.3080641817473675,
+    "raw": 0.9954126091441358,
+    "sim": 0.806572172708325,
+    "a": 0.08620689655172414
+   }
+  },
+  "parts/look_0004": {
+   "label": "lookalike",
+   "phone": {
+    "verdict": "NOT_ENROLLED",
+    "reason": "IDENTITY",
+    "raw": 1.25567730545278,
+    "s": 1.4649377563265835,
+    "sim": 0.8937632239979396,
+    "a": 0.8181818181818182,
+    "peak": [
+     16,
+     20
+    ],
+    "ms": null
+   },
+   "default": {
+    "verdict": "DEFECT",
+    "reason": null,
+    "s": 1.3553368860993555,
+    "raw": 1.0313862613830134,
+    "sim": 0.7988851444528174,
+    "a": 0.07692307692307693
+   },
+   "winner": {
+    "verdict": "DEFECT",
+    "reason": null,
+    "s": 1.3553368860993555,
+    "raw": 1.0313862613830134,
+    "sim": 0.7988851444528174,
+    "a": 0.07692307692307693
+   }
+  },
+  "parts/rot_0001": {
+   "label": "rotated",
+   "phone": {
+    "verdict": "PASS",
+    "reason": null,
+    "raw": 0.4593366455470254,
+    "s": 0.5358857661950021,
+    "sim": 0.9945062990821907,
+    "a": 0.0,
+    "peak": [
+     28,
+     6
+    ],
+    "ms": null
+   },
+   "default": {
+    "verdict": "PASS",
+    "reason": null,
+    "s": 0.43625794413078484,
+    "raw": 0.33198421337933337,
+    "sim": 0.992645334238538,
+    "a": 0.0
+   },
+   "winner": {
+    "verdict": "PASS",
+    "reason": null,
+    "s": 0.43625794413078484,
+    "raw": 0.33198421337933337,
+    "sim": 0.992645334238538,
+    "a": 0.0
+   }
+  },
+  "parts/rot_0002": {
+   "label": "rotated",
+   "phone": {
+    "verdict": "PASS",
+    "reason": null,
+    "raw": 0.7471334267851378,
+    "s": 0.8716442999792439,
+    "sim": 0.9775573806529284,
+    "a": 0.0,
+    "peak": [
+     21,
+     10
+    ],
+    "ms": null
+   },
+   "default": {
+    "verdict": "PASS",
+    "reason": null,
+    "s": 0.5766396039429104,
+    "raw": 0.43881205578910326,
+    "sim": 0.9605785551503655,
+    "a": 0.0
+   },
+   "winner": {
+    "verdict": "PASS",
+    "reason": null,
+    "s": 0.5766396039429104,
+    "raw": 0.43881205578910326,
+    "sim": 0.9605785551503655,
+    "a": 0.0
+   }
+  },
+  "parts/rot_0003": {
+   "label": "rotated",
+   "phone": {
+    "verdict": "PASS",
+    "reason": null,
+    "raw": 0.7968043248085407,
+    "s": 0.9295929254653853,
+    "sim": 0.9730686034764406,
+    "a": 0.0,
+    "peak": [
+     7,
+     28
+    ],
+    "ms": null
+   },
+   "default": {
+    "verdict": "PASS",
+    "reason": null,
+    "s": 0.638195198803105,
+    "raw": 0.4856547231002396,
+    "sim": 0.9524639393579272,
+    "a": 0.0
+   },
+   "winner": {
+    "verdict": "PASS",
+    "reason": null,
+    "s": 0.638195198803105,
+    "raw": 0.4856547231002396,
+    "sim": 0.9524639393579272,
+    "a": 0.0
+   }
+  },
+  "parts/rot_0004": {
+   "label": "rotated",
+   "phone": {
+    "verdict": "NOT_ENROLLED",
+    "reason": "IDENTITY",
+    "raw": 0.8728542326100863,
+    "s": 1.0183166611097654,
+    "sim": 0.96889679484939,
+    "a": 0.004405286343612335,
+    "peak": [
+     6,
+     16
+    ],
+    "ms": null
+   },
+   "default": {
+    "verdict": "PASS",
+    "reason": null,
+    "s": 0.9240376435174494,
+    "raw": 0.703175528017591,
+    "sim": 0.8897203638017254,
+    "a": 0.0
+   },
+   "winner": {
+    "verdict": "PASS",
+    "reason": null,
+    "s": 0.9240376435174494,
+    "raw": 0.703175528017591,
+    "sim": 0.8897203638017254,
+    "a": 0.0
+   }
+  },
+  "parts/rot_0005": {
+   "label": "rotated",
+   "phone": {
+    "verdict": "NOT_ENROLLED",
+    "reason": "IDENTITY",
+    "raw": 0.8723322756275274,
+    "s": 1.0177077192362374,
+    "sim": 0.9654010597941364,
+    "a": 0.015021459227467811,
+    "peak": [
+     6,
+     13
+    ],
+    "ms": null
+   },
+   "default": {
+    "verdict": "PASS",
+    "reason": null,
+    "s": 0.7132146908567438,
+    "raw": 0.5427431667437509,
+    "sim": 0.9441645276666863,
+    "a": 0.0
+   },
+   "winner": {
+    "verdict": "PASS",
+    "reason": null,
+    "s": 0.7132146908567438,
+    "raw": 0.5427431667437509,
+    "sim": 0.9441645276666863,
+    "a": 0.0
+   }
+  },
+  "parts/rot_0006": {
+   "label": "rotated",
+   "phone": {
+    "verdict": "PASS",
+    "reason": null,
+    "raw": 0.8242705137231714,
+    "s": 0.9616363947458407,
+    "sim": 0.975720745584097,
+    "a": 0.0,
+    "peak": [
+     7,
+     12
+    ],
+    "ms": null
+   },
+   "default": {
+    "verdict": "PASS",
+    "reason": null,
+    "s": 0.6424586622899283,
+    "raw": 0.48889913982889,
+    "sim": 0.9679523776784315,
+    "a": 0.0
+   },
+   "winner": {
+    "verdict": "PASS",
+    "reason": null,
+    "s": 0.6424586622899283,
+    "raw": 0.48889913982889,
+    "sim": 0.9679523776784315,
+    "a": 0.0
+   }
+  },
+  "parts/rot_0007": {
+   "label": "rotated",
+   "phone": {
+    "verdict": "PASS",
+    "reason": null,
+    "raw": 0.7300046402162444,
+    "s": 0.8516609761938518,
+    "sim": 0.991770205051821,
+    "a": 0.0,
+    "peak": [
+     23,
+     20
+    ],
+    "ms": null
+   },
+   "default": {
+    "verdict": "PASS",
+    "reason": null,
+    "s": 0.543439795791417,
+    "raw": 0.4135476168446651,
+    "sim": 0.9854934813751627,
+    "a": 0.0
+   },
+   "winner": {
+    "verdict": "PASS",
+    "reason": null,
+    "s": 0.543439795791417,
+    "raw": 0.4135476168446651,
+    "sim": 0.9854934813751627,
+    "a": 0.0
+   }
+  },
+  "parts/rot_0008": {
+   "label": "rotated",
+   "phone": {
+    "verdict": "PASS",
+    "reason": null,
+    "raw": 0.6710841084964548,
+    "s": 0.7829212520909034,
+    "sim": 0.9963172363403431,
+    "a": 0.0,
+    "peak": [
+     23,
+     24
+    ],
+    "ms": null
+   },
+   "default": {
+    "verdict": "PASS",
+    "reason": null,
+    "s": 0.6659636415489616,
+    "raw": 0.5067859935923331,
+    "sim": 0.963274443311226,
+    "a": 0.0
+   },
+   "winner": {
+    "verdict": "PASS",
+    "reason": null,
+    "s": 0.6659636415489616,
+    "raw": 0.5067859935923331,
+    "sim": 0.963274443311226,
+    "a": 0.0
+   }
+  },
+  "parts/rot_0009": {
+   "label": "rotated",
+   "phone": {
+    "verdict": "NOT_ENROLLED",
+    "reason": "IDENTITY",
+    "raw": 0.8180422553500832,
+    "s": 0.9543701880482497,
+    "sim": 0.9696515252367802,
+    "a": 0.0,
+    "peak": [
+     5,
+     17
+    ],
+    "ms": null
+   },
+   "default": {
+    "verdict": "PASS",
+    "reason": null,
+    "s": 0.9496451475906341,
+    "raw": 0.7226623642132791,
+    "sim": 0.85854279669651,
+    "a": 0.0
+   },
+   "winner": {
+    "verdict": "PASS",
+    "reason": null,
+    "s": 0.9496451475906341,
+    "raw": 0.7226623642132791,
+    "sim": 0.85854279669651,
+    "a": 0.0
+   }
+  },
+  "parts/rot_0010": {
+   "label": "rotated",
+   "phone": {
+    "verdict": "PASS",
+    "reason": null,
+    "raw": 0.7811745290720147,
+    "s": 0.9113584015166921,
+    "sim": 0.9811790367313522,
+    "a": 0.0,
+    "peak": [
+     21,
+     26
+    ],
+    "ms": null
+   },
+   "default": {
+    "verdict": "PASS",
+    "reason": null,
+    "s": 0.6298370427400125,
+    "raw": 0.47929432117922466,
+    "sim": 0.9657979572751609,
+    "a": 0.0
+   },
+   "winner": {
+    "verdict": "PASS",
+    "reason": null,
+    "s": 0.6298370427400125,
+    "raw": 0.47929432117922466,
+    "sim": 0.9657979572751609,
+    "a": 0.0
+   }
+  },
+  "parts/wrong_0001": {
+   "label": "wrong",
+   "phone": {
+    "verdict": "NOT_ENROLLED",
+    "reason": "IDENTITY",
+    "raw": 0.8970690342596304,
+    "s": 1.0465668947042834,
+    "sim": 0.9473128958500097,
+    "a": 0.025373134328358207,
+    "peak": [
+     33,
+     12
+    ],
+    "ms": null
+   },
+   "default": {
+    "verdict": "NOT_ENROLLED",
+    "reason": "IDENTITY",
+    "s": 1.1815853405632908,
+    "raw": 0.8991645541470272,
+    "sim": 0.6010739657580358,
+    "a": 0.9451073985680191
+   },
+   "winner": {
+    "verdict": "NOT_ENROLLED",
+    "reason": "IDENTITY",
+    "s": 1.1815853405632908,
+    "raw": 0.8991645541470272,
+    "sim": 0.6010739657580358,
+    "a": 0.9451073985680191
+   }
+  },
+  "parts/wrong_0002": {
+   "label": "wrong",
+   "phone": {
+    "verdict": "NOT_ENROLLED",
+    "reason": "IDENTITY",
+    "raw": 1.2857416407804472,
+    "s": 1.5000123569019932,
+    "sim": 0.9263377031813986,
+    "a": 0.6775067750677507,
+    "peak": [
+     17,
+     30
+    ],
+    "ms": null
+   },
+   "default": {
+    "verdict": "NOT_ENROLLED",
+    "reason": "IDENTITY",
+    "s": 1.3134292150468105,
+    "raw": 0.999495300092534,
+    "sim": 0.5428772857609453,
+    "a": 0.9654427645788337
+   },
+   "winner": {
+    "verdict": "NOT_ENROLLED",
+    "reason": "IDENTITY",
+    "s": 1.3134292150468105,
+    "raw": 0.999495300092534,
+    "sim": 0.5428772857609453,
+    "a": 0.9654427645788337
+   }
+  },
+  "parts/wrong_0003": {
+   "label": "wrong",
+   "phone": {
+    "verdict": "NOT_ENROLLED",
+    "reason": "IDENTITY",
+    "raw": 0.9666772503326503,
+    "s": 1.1277754213162512,
+    "sim": 0.9337943569823937,
+    "a": 0.09554140127388536,
+    "peak": [
+     23,
+     8
+    ],
+    "ms": null
+   },
+   "default": {
+    "verdict": "NOT_ENROLLED",
+    "reason": "IDENTITY",
+    "s": 1.2161124524101388,
+    "raw": 0.9254390466140338,
+    "sim": 0.6276355516759526,
+    "a": 0.5279187817258884
+   },
+   "winner": {
+    "verdict": "NOT_ENROLLED",
+    "reason": "IDENTITY",
+    "s": 1.2161124524101388,
+    "raw": 0.9254390466140338,
+    "sim": 0.6276355516759526,
+    "a": 0.5279187817258884
+   }
+  },
+  "parts/wrong_0004": {
+   "label": "wrong",
+   "phone": {
+    "verdict": "NOT_ENROLLED",
+    "reason": "IDENTITY",
+    "raw": 1.523715947591129,
+    "s": 1.7776454283676812,
+    "sim": 0.8809412377394716,
+    "a": 0.8115942028985508,
+    "peak": [
+     19,
+     20
+    ],
+    "ms": null
+   },
+   "default": {
+    "verdict": "NOT_ENROLLED",
+    "reason": "IDENTITY",
+    "s": 1.515050212652175,
+    "raw": 1.1529251440444577,
+    "sim": 0.4133125962394683,
+    "a": 0.9928952042628775
+   },
+   "winner": {
+    "verdict": "NOT_ENROLLED",
+    "reason": "IDENTITY",
+    "s": 1.515050212652175,
+    "raw": 1.1529251440444577,
+    "sim": 0.4133125962394683,
+    "a": 0.9928952042628775
+   }
+  },
+  "parts/wrong_0005": {
+   "label": "wrong",
+   "phone": {
+    "verdict": "NOT_ENROLLED",
+    "reason": "IDENTITY",
+    "raw": 0.9957262241290176,
+    "s": 1.161665448883083,
+    "sim": 0.9083441796158512,
+    "a": 0.08888888888888889,
+    "peak": [
+     32,
+     22
+    ],
+    "ms": null
+   },
+   "default": {
+    "verdict": "NOT_ENROLLED",
+    "reason": "IDENTITY",
+    "s": 1.418190980437985,
+    "raw": 1.0792170627412685,
+    "sim": 0.4058553616238839,
+    "a": 1.0
+   },
+   "winner": {
+    "verdict": "NOT_ENROLLED",
+    "reason": "IDENTITY",
+    "s": 1.418190980437985,
+    "raw": 1.0792170627412685,
+    "sim": 0.4058553616238839,
+    "a": 1.0
+   }
+  },
+  "parts/wrong_0006": {
+   "label": "wrong",
+   "phone": {
+    "verdict": "NOT_ENROLLED",
+    "reason": "IDENTITY",
+    "raw": 1.0860613996791988,
+    "s": 1.2670551129418217,
+    "sim": 0.9090829134219769,
+    "a": 0.8316326530612245,
+    "peak": [
+     10,
+     24
+    ],
+    "ms": null
+   },
+   "default": {
+    "verdict": "NOT_ENROLLED",
+    "reason": "IDENTITY",
+    "s": 1.364732236383669,
+    "raw": 1.0385359488913422,
+    "sim": 0.5423289311392088,
+    "a": 1.0
+   },
+   "winner": {
+    "verdict": "NOT_ENROLLED",
+    "reason": "IDENTITY",
+    "s": 1.364732236383669,
+    "raw": 1.0385359488913422,
+    "sim": 0.5423289311392088,
+    "a": 1.0
+   }
+  },
+  "parts/wrong_0007": {
+   "label": "wrong",
+   "phone": {
+    "verdict": "NOT_ENROLLED",
+    "reason": "IDENTITY",
+    "raw": 0.9085170161081665,
+    "s": 1.0599226993929847,
+    "sim": 0.9450429816309731,
+    "a": 0.02050473186119874,
+    "peak": [
+     18,
+     6
+    ],
+    "ms": null
+   },
+   "default": {
+    "verdict": "NOT_ENROLLED",
+    "reason": "IDENTITY",
+    "s": 1.1894893809444638,
+    "raw": 0.9051793824470376,
+    "sim": 0.5990242163721046,
+    "a": 0.9554455445544554
+   },
+   "winner": {
+    "verdict": "NOT_ENROLLED",
+    "reason": "IDENTITY",
+    "s": 1.1894893809444638,
+    "raw": 0.9051793824470376,
+    "sim": 0.5990242163721046,
+    "a": 0.9554455445544554
+   }
+  },
+  "parts/wrong_0008": {
+   "label": "wrong",
+   "phone": {
+    "verdict": "NOT_ENROLLED",
+    "reason": "IDENTITY",
+    "raw": 1.2703592473290648,
+    "s": 1.4820664651894124,
+    "sim": 0.9235456382437432,
+    "a": 0.6984993178717599,
+    "peak": [
+     18,
+     8
+    ],
+    "ms": null
+   },
+   "default": {
+    "verdict": "NOT_ENROLLED",
+    "reason": "IDENTITY",
+    "s": 1.30610072094909,
+    "raw": 0.9939184518516743,
+    "sim": 0.5415969657816668,
+    "a": 1.0
+   },
+   "winner": {
+    "verdict": "NOT_ENROLLED",
+    "reason": "IDENTITY",
+    "s": 1.30610072094909,
+    "raw": 0.9939184518516743,
+    "sim": 0.5415969657816668,
+    "a": 1.0
+   }
+  },
+  "parts/wrong_0009": {
+   "label": "wrong",
+   "phone": {
+    "verdict": "NOT_ENROLLED",
+    "reason": "IDENTITY",
+    "raw": 0.9421677501165185,
+    "s": 1.0991813772100234,
+    "sim": 0.935709330031236,
+    "a": 0.09315068493150686,
+    "peak": [
+     15,
+     8
+    ],
+    "ms": null
+   },
+   "default": {
+    "verdict": "NOT_ENROLLED",
+    "reason": "IDENTITY",
+    "s": 1.1552972913820494,
+    "raw": 0.8791598357318702,
+    "sim": 0.6456406456576675,
+    "a": 0.5589519650655022
+   },
+   "winner": {
+    "verdict": "NOT_ENROLLED",
+    "reason": "IDENTITY",
+    "s": 1.1552972913820494,
+    "raw": 0.8791598357318702,
+    "sim": 0.6456406456576675,
+    "a": 0.5589519650655022
+   }
+  },
+  "parts/wrong_0010": {
+   "label": "wrong",
+   "phone": {
+    "verdict": "NOT_ENROLLED",
+    "reason": "IDENTITY",
+    "raw": 1.4984823961406701,
+    "s": 1.7482066688349067,
+    "sim": 0.8802887709894388,
+    "a": 0.8315539739027283,
+    "peak": [
+     19,
+     20
+    ],
+    "ms": null
+   },
+   "default": {
+    "verdict": "NOT_ENROLLED",
+    "reason": "IDENTITY",
+    "s": 1.5193187756513338,
+    "raw": 1.156173441407522,
+    "sim": 0.405151374840946,
+    "a": 1.0
+   },
+   "winner": {
+    "verdict": "NOT_ENROLLED",
+    "reason": "IDENTITY",
+    "s": 1.5193187756513338,
+    "raw": 1.156173441407522,
+    "sim": 0.405151374840946,
+    "a": 1.0
+   }
+  },
+  "parts/wrong_0011": {
+   "label": "wrong",
+   "phone": {
+    "verdict": "NOT_ENROLLED",
+    "reason": "IDENTITY",
+    "raw": 1.0671708067544774,
+    "s": 1.2450163752066983,
+    "sim": 0.9077541732509563,
+    "a": 0.1154562383612663,
+    "peak": [
+     6,
+     17
+    ],
+    "ms": null
+   },
+   "default": {
+    "verdict": "NOT_ENROLLED",
+    "reason": "IDENTITY",
+    "s": 1.4737437197375851,
+    "raw": 1.1214916681795504,
+    "sim": 0.3966006036582772,
+    "a": 1.0
+   },
+   "winner": {
+    "verdict": "NOT_ENROLLED",
+    "reason": "IDENTITY",
+    "s": 1.4737437197375851,
+    "raw": 1.1214916681795504,
+    "sim": 0.3966006036582772,
+    "a": 1.0
+   }
+  },
+  "parts/wrong_0012": {
+   "label": "wrong",
+   "phone": {
+    "verdict": "NOT_ENROLLED",
+    "reason": "IDENTITY",
+    "raw": 1.0026601007007612,
+    "s": 1.169754866079321,
+    "sim": 0.9043702955251746,
+    "a": 0.6666666666666666,
+    "peak": [
+     5,
+     22
+    ],
+    "ms": null
+   },
+   "default": {
+    "verdict": "NOT_ENROLLED",
+    "reason": "IDENTITY",
+    "s": 1.378947046272483,
+    "raw": 1.0493531558735032,
+    "sim": 0.5048864324345517,
+    "a": 1.0
+   },
+   "winner": {
+    "verdict": "NOT_ENROLLED",
+    "reason": "IDENTITY",
+    "s": 1.378947046272483,
+    "raw": 1.0493531558735032,
+    "sim": 0.5048864324345517,
+    "a": 1.0
+   }
+  }
+ },
+ "runtime": {
+  "seconds": 340.0,
+  "backboneCalls": 501,
+  "backboneSeconds": 213.3,
+  "knnCacheHits": 1811,
+  "knnCacheMisses": 653
+ }
+}
