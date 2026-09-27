@@ -43,9 +43,17 @@ fun ClipsScreen(g: AppGraph, nav: Navigator) {
     var refresh by remember { mutableIntStateOf(0) }
     var message by remember { mutableStateOf<String?>(null) }
     var exporting by remember { mutableStateOf(false) }
-    val scope = androidx.compose.runtime.rememberCoroutineScope()
     val stats by g.camera.stats.collectAsStateWithLifecycle()
     val clips = remember(refresh) { listClips(g) }
+    var confirmDelete by remember { mutableStateOf<File?>(null) }
+    confirmDelete?.let { f ->
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = { confirmDelete = null },
+            title = { Text("Delete ${f.name}?") },
+            confirmButton = { TextButton(onClick = { f.deleteRecursively(); refresh++; confirmDelete = null }) { Text("Delete", color = Kz.Defect) } },
+            dismissButton = { TextButton(onClick = { confirmDelete = null }) { Text("Keep") } },
+        )
+    }
 
     Column(Modifier.fillMaxSize()) {
         ScreenHeader("Clips & replay", onBack = { nav.back() })
@@ -78,9 +86,9 @@ fun ClipsScreen(g: AppGraph, nav: Navigator) {
                 Note("Label = what the clip shows (good parts, seeded defects, wrong objects…). Start every clip with ½ s of EMPTY sheet. Replay feeds it through the same pipeline.", Kz.TextDim)
             }
             Row(Modifier.padding(horizontal = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                SecondaryButton(if (exporting) "EXPORTING…" else "Export eval set (teach + labelled clips → twin_eval.py)", Modifier.weight(1f), enabled = !exporting) {
+                SecondaryButton(if (exporting) "EXPORTING…" else "Export eval set (teach + labelled clips)", Modifier.weight(1f), enabled = !exporting) {
                     exporting = true
-                    scope.launch(kotlinx.coroutines.Dispatchers.Default) {
+                    g.scope.launch {
                         message = try {
                             val dir = com.kaizeneye.v2.export.EvalBatch(g).run { message = it }
                             "export ready: ${dir.absolutePath}"
@@ -102,11 +110,11 @@ fun ClipsScreen(g: AppGraph, nav: Navigator) {
                     }
                     TextButton(onClick = {
                         message = "teaching from ${f.name}…"
-                        scope.launch(kotlinx.coroutines.Dispatchers.Default) { message = g.hub.teachFromClip(f) }
+                        g.scope.launch { message = g.hub.teachFromClip(f) }
                     }) { Text("Teach") }
                     TextButton(onClick = { nav.go(Screen.Inspect(LineMode.INSPECT, replayClip = f, paced = true)) }) { Text("Replay") }
                     TextButton(onClick = { nav.go(Screen.Inspect(LineMode.INSPECT, replayClip = f, paced = false)) }) { Text("Fast") }
-                    TextButton(onClick = { f.deleteRecursively(); refresh++ }) { Text("Del", color = Kz.Defect) }
+                    TextButton(onClick = { confirmDelete = f }) { Text("Del", color = Kz.Defect) }
                 }
             }
         }

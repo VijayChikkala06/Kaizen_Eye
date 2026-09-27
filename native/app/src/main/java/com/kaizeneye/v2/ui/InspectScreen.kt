@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -42,7 +43,7 @@ fun InspectScreen(g: AppGraph, nav: Navigator, s: Screen.Inspect) {
         // Camera: nothing runs until the operator clears the sheet and taps LEARN SHEET (never learned silently).
         if (s.replayClip != null) g.hub.startReplay(s.replayClip, s.paced, s.mode) else g.hub.openInspect(s.mode)
     }
-    DisposableEffect(Unit) { onDispose { g.hub.stopLine() } }
+    DisposableEffect(Unit) { onDispose { g.hub.closeCameraScreen() } }
 
     Column(Modifier.fillMaxSize()) {
         ScreenHeader(
@@ -52,7 +53,7 @@ fun InspectScreen(g: AppGraph, nav: Navigator, s: Screen.Inspect) {
                 else -> "Inspect · ${ui.twinName}"
             },
             onBack = { nav.back() },
-        ) { Chip(ui.accel.ifBlank { g.engines.badge() }, Kz.Accent) }
+        ) { if (s.replayClip != null) Chip(ui.accel.ifBlank { g.engines.badge() }, Kz.Accent) }
         Hud(ui)
         Box(Modifier.weight(1f).fillMaxWidth()) {
             if (s.replayClip != null) ReplayFrameView(ui, Modifier.fillMaxSize())
@@ -62,7 +63,7 @@ fun InspectScreen(g: AppGraph, nav: Navigator, s: Screen.Inspect) {
             }
             Column(Modifier.align(Alignment.TopCenter).padding(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 if (s.replayClip != null) Chip("REPLAY — identical pipeline, file frames", Kz.Warn)
-                if (ui.lineTooFast) Banner("LINE TOO FAST — judge queue is growing", Kz.Defect)
+                if (ui.lineTooFast) Banner("Too fast — slow the line down", Kz.Defect)
                 ui.banner?.let { Banner(it, Kz.Warn) }
                 ui.message?.let { Banner(it, Kz.TextDim) }
                 if (!ui.needsSheet) ui.hint?.let { Banner(it, Kz.Text) }
@@ -85,9 +86,9 @@ fun InspectScreen(g: AppGraph, nav: Navigator, s: Screen.Inspect) {
                         color = Kz.TextDim, fontSize = 13.sp,
                     )
                     if (sheet.state == com.kaizeneye.v2.pipeline.SheetUi.State.CAPTURING) LinearProgressIndicator(progress = { sheet.progress }, modifier = Modifier.fillMaxWidth())
-                    ui.hint?.let { Text(it, color = Kz.Warn, fontSize = 13.sp) }
-                    Text("Zoom in until only the sheet is visible (use the same zoom as when teaching).", color = Kz.TextDim, fontSize = 12.sp)
-                    ZoomControl(g, Modifier.fillMaxWidth())
+                    if (sheet.state == com.kaizeneye.v2.pipeline.SheetUi.State.FAILED) Text(sheet.detail, color = Kz.Defect, fontSize = 13.sp)
+                    else ui.hint?.let { Text(it, color = Kz.Warn, fontSize = 13.sp) }
+                    Note("The zoom set while teaching is used again here.")
                     PrimaryButton("LEARN SHEET", Modifier.fillMaxWidth(), enabled = sheet.state != com.kaizeneye.v2.pipeline.SheetUi.State.CAPTURING) {
                         g.hub.learnSheetAndStart()
                     }
@@ -96,47 +97,42 @@ fun InspectScreen(g: AppGraph, nav: Navigator, s: Screen.Inspect) {
             ui.replayProgress?.let { LinearProgressIndicator(progress = { it }, modifier = Modifier.fillMaxWidth().align(Alignment.BottomCenter)) }
         }
         Column(Modifier.fillMaxWidth().background(Kz.Surface).padding(10.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            val calibrating = s.mode == LineMode.CALIBRATE
             ui.calibration?.let { c ->
-                Text(
-                    "Calibration: ${c.valid}/${c.target} valid parts (presented ${c.presented}) · sanity ${c.sanityOk} · identity ${c.identityOk} · shape ${c.geometryOk}" +
-                        (c.alphaPct?.let { " · bound ≤ ${"%.1f".format(it)} %" } ?: ""),
-                    color = Kz.Text, fontSize = 13.sp,
-                )
-                Note("Present ≥ 40 DISTINCT good parts (not the taught one). The threshold is only ever raised.")
-                PrimaryButton("FINISH CALIBRATION", Modifier.fillMaxWidth(), enabled = c.valid >= 1) {
-                    g.hub.finishCalibration(); nav.replace(Screen.Certificate)
+                Text("Calibration: ${c.valid} / ${c.target} good parts", color = Kz.Text, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+                LinearProgressIndicator(progress = { (c.valid.toFloat() / c.target).coerceIn(0f, 1f) }, modifier = Modifier.fillMaxWidth())
+                Note("Show ${c.target} different GOOD parts, one at a time — not the one you taught. Nothing else changes while calibrating.")
+                val enough = c.valid >= c.target
+                PrimaryButton(
+                    if (enough) "FINISH CALIBRATION" else "FINISH WITH ${c.valid} / ${c.target}", Modifier.fillMaxWidth(),
+                    enabled = c.valid >= 1, color = if (enough) Kz.Accent else Kz.Warn,
+                ) { g.hub.finishCalibration(); nav.replace(Screen.Certificate) }
+            }
+            if (!calibrating && s.replayClip == null && !ui.needsSheet) {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    SecondaryButton("Re-learn sheet", enabled = sheet.state != com.kaizeneye.v2.pipeline.SheetUi.State.CAPTURING) { g.hub.learnSheetAndStart() }
+                    if (sheet.detail.contains("NOT plain")) Text("Background not plain", color = Kz.Warn, fontSize = 12.sp)
                 }
             }
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                Text("Parts move", color = Kz.TextDim, fontSize = 12.sp)
-                val current = if (g.prefs.triggerMode == "STEADY") "STEADY" else g.prefs.motion
-                for ((key, label) in listOf("H" to "across", "V" to "down", "STEADY" to "held still")) {
-                    androidx.compose.material3.FilterChip(
-                        selected = current == key,
-                        onClick = {
-                            g.hub.setMotion(key) {
-                                if (s.replayClip != null) g.hub.startReplay(s.replayClip, s.paced, s.mode) else g.hub.startLine(s.mode)
-                            }
-                        },
-                        label = { Text(label, fontSize = 12.sp) },
+            if (!calibrating) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Column(Modifier.padding(end = 8.dp)) {
+                        Text("Tolerance ${"%.1f".format(ui.sensitivity)}×", color = Kz.TextDim, fontSize = 12.sp)
+                        Text("◀ stricter · forgiving ▶", color = Kz.TextDim, fontSize = 9.sp)
+                    }
+                    Slider(
+                        value = ui.sensitivity, onValueChange = { g.hub.setSensitivity(it) },
+                        onValueChangeFinished = { g.hub.setSensitivity(g.hub.inspect.value.sensitivity, persist = true) },
+                        valueRange = 0.5f..2.5f, modifier = Modifier.weight(1f),
                     )
                 }
-            }
-            if (s.replayClip == null && !ui.needsSheet) {
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    SecondaryButton("Re-learn sheet") { g.hub.learnSheetAndStart() }
-                    SecondaryButton("Zoom") { g.hub.openInspect(s.mode); g.hub.releaseSheet() }
-                    Text(sheet.detail, color = Kz.TextDim, fontSize = 11.sp, maxLines = 3, modifier = Modifier.weight(1f))
+                if (g.hub.certificateVoidAtCurrentTolerance()) Text("Certificate not valid at this tolerance (move the slider back towards 1.0×)", color = Kz.Warn, fontSize = 11.sp)
+                // A fixed slot for the last reject, so the camera view never jumps when the first reject appears.
+                Box(Modifier.fillMaxWidth().height(104.dp)) {
+                    ui.reject?.let { RejectCardView(it, onExplain = { g.hub.explainLast() }) }
+                        ?: Note("The last REJECT / NOT THE PART is explained here.", Kz.TextDim)
                 }
             }
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Column(Modifier.padding(end = 8.dp)) {
-                    Text("Tolerance ${"%.2f".format(ui.sensitivity)}×", color = Kz.TextDim, fontSize = 12.sp)
-                    Text("◀ stricter · forgiving ▶", color = Kz.TextDim, fontSize = 9.sp)
-                }
-                Slider(value = ui.sensitivity, onValueChange = { g.hub.setSensitivity(it) }, valueRange = 0.5f..2.5f, modifier = Modifier.weight(1f))
-            }
-            ui.reject?.let { RejectCardView(it, onExplain = { g.hub.explainLast() }) }
         }
     }
 }
@@ -148,17 +144,12 @@ private fun Hud(ui: InspectUi) {
         Modifier.fillMaxWidth().background(Kz.Bg).padding(horizontal = 10.dp, vertical = 6.dp),
         horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically,
     ) {
-        Stat("judged", c.judged.toString(), Kz.Text)
-        Stat("pass", c.pass.toString(), Kz.Pass)
-        Stat("defect", c.defect.toString(), Kz.Defect)
-        Stat("not part", c.notEnrolled.toString(), Kz.NotEnrolled)
-        Stat("reframe", c.reframe.toString(), Kz.Reframe)
+        Stat("PASS", c.pass.toString(), Kz.Pass)
+        Stat("REJECT", c.defect.toString(), Kz.Defect)
+        Stat("NOT THE PART", c.notEnrolled.toString(), Kz.NotEnrolled)
         Column(Modifier.weight(1f), horizontalAlignment = Alignment.End) {
-            Text(
-                "${"%.0f".format(c.ppm)} ppm · ${"%.0f".format(ui.fps)} fps · p95 ${ui.latencyP95?.let { "%.0f ms".format(it) } ?: "–"}",
-                color = Kz.TextDim, fontSize = 11.sp, fontFamily = Kz.Mono,
-            )
-            Text(ui.governor, color = Kz.TextDim, fontSize = 11.sp, fontFamily = Kz.Mono)
+            Text("${c.judged} judged", color = Kz.TextDim, fontSize = 11.sp, fontFamily = Kz.Mono)
+            ui.latencyP95?.let { Text("${"%.0f".format(it)} ms per part", color = Kz.TextDim, fontSize = 11.sp, fontFamily = Kz.Mono) }
         }
     }
 }
@@ -187,12 +178,8 @@ private fun RejectCardView(r: RejectCard, onExplain: () -> Unit) {
             bmp?.let { Image(it.asImageBitmap(), null, Modifier.size(84.dp)) }
             Column(Modifier.weight(1f)) {
                 Text(r.title, color = Kz.Defect, fontWeight = FontWeight.Bold, fontSize = 16.sp)
-                Text(r.facts, color = Kz.TextDim, fontSize = 11.sp, fontFamily = Kz.Mono)
-                Text(r.sentence, color = Kz.Text, fontSize = 13.sp)
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Note("explained by ${r.sentenceSource}")
-                    if (r.sentenceSource == "tap to explain") TextButton(onClick = onExplain) { Text("Explain") }
-                }
+                Text(r.sentence, color = Kz.Text, fontSize = 13.sp, maxLines = 3)
+                if (r.sentenceSource == "tap to explain") TextButton(onClick = onExplain) { Text("Explain") }
             }
         }
     }

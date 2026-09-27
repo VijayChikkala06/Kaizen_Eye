@@ -180,8 +180,11 @@ class FrameAnalysis(val params: MaskParams = MaskParams(), val stages: StageTime
      * same §2.6 check as the plain crop (it looks at components, not at the crop).
      */
     private fun canonicalSnapshot(
-        a: Analysed, c: Component, n: Int, gh: Int, gw: Int, dst: ByteArray?, geo: GeometryFeatures, theta: Double, t0: Long,
+        a: Analysed, c: Component, n: Int, gh: Int, gw: Int, dst: ByteArray?, geo: GeometryFeatures, theta0: Double, t0: Long,
     ): CropSnapshot {
+        // Round / square parts have no stable principal axis (spec §2.7 θ is then noise): crop them at θ = 0 like the spec,
+        // so teach and judge always agree. Elongated parts get their long axis horizontal.
+        val theta = if (geo.aspect >= CanonicalCrop.MIN_ASPECT_FOR_AXIS) 0.0 else theta0
         val sq = CanonicalCrop.square(a.labels, a.w, a.h, c, theta, factor, params.cropMargin)
         val crop = dst ?: ByteArray(n * n * 3)
         ImageOps.cropResizeRotated(a.rgba, sq.cx, sq.cy, sq.side, theta, n, crop)
@@ -190,6 +193,13 @@ class FrameAnalysis(val params: MaskParams = MaskParams(), val stages: StageTime
         ImageOps.cropResizeRotated(a.rgba, sq.cx, sq.cy, sq.side, theta + Math.PI, n, alt)
         val altCov = CanonicalCrop.coverage(a.labels, a.w, a.h, c.label, sq, theta + Math.PI, factor, gh, gw)
         var sanity = Sanity.check(c, a.components, a.w, a.h, params, a.fullW, a.fullH)
+        // §2.6 MULTIPLE on the canonical square too (it can be larger than the axis-aligned one for a diagonal part).
+        if (sanity == SanityReason.OK) {
+            for (d in a.components) {
+                if (d.label == c.label || d.area < params.multipleRatio * c.area) continue
+                if (CanonicalCrop.contains(sq, d.cx * factor, d.cy * factor)) { sanity = SanityReason.MULTIPLE; break }
+            }
+        }
         val sets = PatchCoverage.sets(cov, gh, gw, params.coreThreshold)
         val altSets = PatchCoverage.sets(altCov, gh, gw, params.coreThreshold)
         if (sanity == SanityReason.OK && (sets.isCoreEmpty || altSets.isCoreEmpty)) sanity = SanityReason.NO_CORE

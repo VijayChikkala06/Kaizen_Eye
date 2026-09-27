@@ -13,7 +13,6 @@ package com.kaizeneye.core.twin
  * for the max-based score.
  */
 
-import com.kaizeneye.core.math.Stats
 import kotlin.math.min
 
 /** Numbers of the fit gate. */
@@ -37,11 +36,11 @@ class FitThreshold(
     val margin: Double?,
     /** Fits of the calibration parts (real good parts presented on the line); part of the same-part spread. */
     val cal: DoubleArray = DoubleArray(0),
+    /** The numbers the threshold was derived with (kept so calibration / negatives re-derive with the same factor). */
+    val params: FitParams = FitParams(),
 ) {
     /** The largest same-part fit seen (teach ∪ calibration). */
     val hi: Double get() = (pos + cal).filter { !it.isNaN() }.maxOrNull() ?: Double.NaN
-
-    fun passes(fit: Double, sensitivity: Double = 1.0): Boolean = fit.isNaN() || fit <= tauFit * scale(sensitivity)
 
     companion object {
         const val RULE_LSO = "lso"
@@ -62,15 +61,12 @@ class FitThreshold(
             require(p.isNotEmpty() || c.isNotEmpty()) { "fit threshold needs at least one same-part fit" }
             val hi = (p + c).max()
             val n = neg.filter { !it.isNaN() }.toDoubleArray()
-            if (n.isEmpty()) return FitThreshold(params.factor * hi, p, n, RULE_LSO, null, c)
+            if (n.isEmpty()) return FitThreshold(params.factor * hi, p, n, RULE_LSO, null, c, params)
             val lo = n.min()
             val margin = lo - hi
-            if (lo <= hi * params.overlapFactor) return FitThreshold(params.factor * hi, p, n, RULE_OVERLAP, margin, c)
+            if (lo <= hi * params.overlapFactor) return FitThreshold(params.factor * hi, p, n, RULE_OVERLAP, margin, c, params)
             val tau = min(params.factor * hi, (hi + lo) / 2.0)          // always in (hi, lo)
-            return FitThreshold(tau, p, n, RULE_MIDPOINT, margin, c)
+            return FitThreshold(tau, p, n, RULE_MIDPOINT, margin, c, params)
         }
-
-        /** Percentile helper for reports. */
-        fun p5(v: DoubleArray): Double = Stats.percentile(v, 5.0)
     }
 }

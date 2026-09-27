@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
@@ -25,6 +26,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
@@ -38,7 +40,7 @@ fun ScreenHeader(title: String, onBack: (() -> Unit)?, trailing: @Composable Row
         verticalAlignment = Alignment.CenterVertically,
     ) {
         if (onBack != null) TextButton(onClick = onBack) { Text("‹ Back", color = Kz.TextDim) }
-        Text(title, fontSize = 18.sp, fontWeight = FontWeight.SemiBold, color = Kz.Text, modifier = Modifier.padding(start = 6.dp).weight(1f))
+        Text(title, fontSize = 18.sp, fontWeight = FontWeight.SemiBold, color = Kz.Text, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(start = 6.dp).weight(1f))
         trailing()
     }
 }
@@ -64,7 +66,8 @@ fun PrimaryButton(text: String, modifier: Modifier = Modifier, enabled: Boolean 
         modifier = modifier.height(52.dp),
         shape = RoundedCornerShape(10.dp),
         colors = ButtonDefaults.buttonColors(containerColor = color, contentColor = Color.White),
-    ) { Text(text, fontSize = 16.sp, fontWeight = FontWeight.SemiBold) }
+        contentPadding = PaddingValues(horizontal = 12.dp),
+    ) { Text(text, fontSize = 16.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, softWrap = false, overflow = TextOverflow.Ellipsis) }
 }
 
 @Composable
@@ -75,7 +78,8 @@ fun SecondaryButton(text: String, modifier: Modifier = Modifier, enabled: Boolea
         modifier = modifier.height(46.dp),
         shape = RoundedCornerShape(10.dp),
         border = BorderStroke(1.dp, Kz.Line),
-    ) { Text(text, color = Kz.Text, fontSize = 14.sp) }
+        contentPadding = PaddingValues(horizontal = 10.dp),
+    ) { Text(text, color = Kz.Text, fontSize = 14.sp, maxLines = 1, softWrap = false, overflow = TextOverflow.Ellipsis) }
 }
 
 /** Small status chip, e.g. an accelerator badge or "AIRPLANE MODE ✓". */

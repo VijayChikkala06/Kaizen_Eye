@@ -125,3 +125,41 @@ The other earbud case still PASSed after teaching one. Full analysis, numbers an
 - Slider renamed Tolerance, 0.5-2.5x. Weak teaches are called out on the Armed card.
 - Tests: core 171 -> 181 (FitGateTest, CanonicalCropTest, RealTwinFitTest skipped without data), app RoiSelectTest; goldens unchanged.
 - NOT verified on the phone: live canonical judging latency (telemetry stage snapshot), end-to-end look-alike rejection on live frames.
+
+## Final fine-tune pass before the evaluation (2026-09-27, ~07:15-07:45 IST)
+Four read-only reviews (pipeline, UI/camera, core, runtime) then fixes; no architecture change, no new feature. Tests 244/244.
+- Core: a NaN/infinite score can no longer PASS (REFRAME "SCORE_FAILED"); the fit gate never passes a NaN fit; the vote only
+  applies to DEFECTs, re-checks the chosen crop's fit gate and carries its orientation (heat map / explanation no longer
+  mirrored); calibration replaces the fit-gate samples with the VALID ones (a look-alike shown during calibration cannot
+  loosen the gate); teach fails on all-zero LSO; segments clamped >= 0; TwinStore restores the old Twin if a save fails and a
+  damaged fit.json degrades to "no fit gate" instead of an unloadable Twin; negatives maps validated + written atomically;
+  exited-unjudged counts only confirmed tracks; canonical square clamped to the frame, MULTIPLE checked on the rotated
+  square, round parts (aspect >= 0.85) cropped at theta = 0 (unstable principal axis).
+- Pipeline: leaving any camera screen resets the sheet/teach/circle state (system back during a recording used to build and
+  activate a partial Twin on the next screen); an engine reload stops every session that holds the old engine; failed
+  reload keeps the old engine; ensure() never double-loads; the self-test no longer switches the app backbone; flicker now
+  re-learns the sheet at 10 ms instead of changing exposure after the sheet was learned (and never persists the locks);
+  replay threads guarded (no stale session hijacks Inspect); calibration drains the judge queue before finishing; judge
+  failures show as REFRAME "error" (never dropped); the best SANE snapshot is judged; whole-view tracking merges glare-split
+  pieces like the circle does; fit negatives applied to the CURRENT active Twin (no lost calibration); batch jobs never
+  beep/explain/write reject files; uncaught coroutine errors are logged instead of killing the app.
+- Runtime: NaN features answer NaN (graphs stay enabled); one accelerator error is retried before the CPU fallback;
+  an accelerator must beat CPU on the median too; the crash-guard marker is cleared on a cancelled load; the app-level
+  "crashed natively - not retried" block is gone (the runtime guard already strikes the candidate).
+- UI declutter: Home = model/offline chips, active part card (plain calibration sentence, look-alike protection line),
+  Wrong objects / Calibrate / Certificate, teach, other parts (delete with confirm), one "Advanced" toggle for clips,
+  telemetry, readiness, self-test; INSPECT/TEACH disabled until the model is loaded; Inspect HUD = PASS / REJECT /
+  NOT THE PART; motion chips, zoom on Inspect/Negatives, tau/LSO/fps/p95/governor jargon removed from operator screens;
+  fixed reject-card slot (camera view no longer jumps); tolerance persisted on release + certificate-void warning;
+  buttons never wrap; keyboard no longer hides the part name (imePadding); camera permission re-binds the preview;
+  reject beep on the ALARM stream (audible in silent / DND); Negatives screen shows one step at a time.
+- Second pass (verification review of the fixes): sheet state reset when a camera screen is left; engine reload clears the
+  sheet and re-shows LEARN SHEET; heat map anchored on the judged snapshot; whole-view piece merge only joins pieces
+  <= 0.5x the biggest candidate, carries the merged label map and is off for the spec pipeline (parity); a failed reload
+  restores the previous backbone choice and shows the error on Home; only the newest fit job applies; a part is never
+  counted twice after a judge failure; the theta = 0 rule for round parts bumps preprocessVersion to 2 (accuracy mode), so
+  parts taught before 07:45 IST must be taught again; interactive Replay keeps its reject card; Teach panel scrolls.
+- DINOv2 accelerator retry (07:58 IST): registering the plain fp32 export (`dinov2_s14_448_fp32.tflite`, 88 MB, pushed) as
+  the first variant lets the GPU delegate compile it: **GPU 57 ms (2.1x CPU), chosen**. NPU (QNN 2.49) still runs it at
+  184-187 ms = no speed-up (the ViT falls back inside the delegate), so the honest rule keeps it off. The fp16-weight file
+  fails GPU compile (dequantize ops). ResNet18 stays the only backbone that runs on the NPU (10.9 ms; GPU 4.7 ms wins).

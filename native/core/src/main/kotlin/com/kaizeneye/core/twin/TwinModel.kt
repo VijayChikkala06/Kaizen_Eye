@@ -299,17 +299,17 @@ class TwinModel(
         bankRule: BankRule = pipeline.bankRule,
         params: JudgeParams = JudgeParams(),
     ): VoteOutcome {
-        val scores = extras.take(params.vote.maxExtra).map { (t, tp) ->
+        val pairs = extras.take(params.vote.maxExtra).map { (t, tp) ->
             val a = scoreCrop(t.features, t.cov, knn, sensitivity, scoreRule, bankRule, params)?.score
             val b = scoreCrop(tp.features, tp.cov, knn, sensitivity, scoreRule, bankRule, params)?.score
             when {
-                a == null -> b
-                b == null -> a
-                thresholds.fit != null && !a.fit.isNaN() && !b.fit.isNaN() -> if (b.fit < a.fit) b else a
-                else -> if (Scoring.lowerRaw(a, b) === b) b else a
+                a == null -> b to 1
+                b == null -> a to 0
+                thresholds.fit != null && !a.fit.isNaN() && !b.fit.isNaN() -> if (b.fit < a.fit) b to 1 else a to 0
+                else -> if (Scoring.lowerRaw(a, b) === b) b to 1 else a to 0
             }
         }
-        return VerdictEngine.vote(first, scores, thresholds.coverageCut, params.vote)
+        return VerdictEngine.vote(first, pairs.map { it.first }, thresholds.coverageCut, params.vote, IntArray(pairs.size) { pairs[it].second })
     }
 
     /** Number of distinct segments that contain keyframes (`B_used`, spec §10.2). */
@@ -329,10 +329,10 @@ class TwinModel(
             thresholds.tauTeach, positives, negativeSims, thresholds.geometry, segmentsUsed, samples, params,
             latenciesMs, accelerator,
         )
-        // The FIT gate learns from the real good parts too (their fits join the same-part spread; negatives are kept).
+        // The FIT gate learns from the real good parts too: the fits of the VALID samples (every gate passed) REPLACE the
+        // previous calibration fits, so a look-alike or hand shown during calibration can never loosen the gate.
         val fit = thresholds.fit?.let { f ->
-            val cal = (f.cal.toList() + samples.filter { it.sanityOk }.mapNotNull { it.fit }).toDoubleArray()
-            FitThreshold.derive(f.pos, f.neg, FitParams(), cal)
+            FitThreshold.derive(f.pos, f.neg, f.params, samples.filter { it.valid }.mapNotNull { it.fit }.toDoubleArray())
         }
         val th = thresholds.copy(
             tau = r.tauCal, calibrated = true, tauId = r.identity.tauId, tauIdRule = r.identity.rule,
@@ -372,13 +372,14 @@ class TwinModel(
      * Copy with the fits of known DIFFERENT objects ([negativeFits]: other Twins' keyframes, the negatives library scored
      * against this Twin's bank) and the fit threshold re-derived (midpoint rule). No-op for a Twin without a fit gate.
      */
-    fun withFitNegatives(negativeFits: DoubleArray, params: FitParams = FitParams()): TwinModel {
+    fun withFitNegatives(negativeFits: DoubleArray): TwinModel {
         val f = thresholds.fit ?: return this
-        return copy(thresholds = thresholds.copy(fit = FitThreshold.derive(f.pos, negativeFits, params, f.cal)))
+        return copy(thresholds = thresholds.copy(fit = FitThreshold.derive(f.pos, negativeFits, f.params, f.cal)))
     }
 
-    /** Copy with a new sensitivity (slider, 0.5–2.5× on τ). */
-    fun withSensitivity(sensitivity: Double): TwinModel = copy(thresholds = thresholds.copy(sensitivity = sensitivity))
+    /** Copy with a new sensitivity (slider, 0.5–2.5× on τ); a non-finite or non-positive value falls back to 1. */
+    fun withSensitivity(sensitivity: Double): TwinModel =
+        copy(thresholds = thresholds.copy(sensitivity = if (sensitivity.isNaN() || sensitivity <= 0.0 || sensitivity.isInfinite()) 1.0 else sensitivity))
 
     /** Copy with a new display name. */
     fun withName(name: String): TwinModel = copy(name = name)

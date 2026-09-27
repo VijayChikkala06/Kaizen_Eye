@@ -63,6 +63,8 @@ object ClipJobs {
         sampleEveryMs: Long = 125L,
         /** false = the spec pipeline (rotation NONE, no fit gate): the self-test regression compares with the laptop reference. */
         accuracy: Boolean = true,
+        /** Negative-object globals for τ_id (the live teach passes the negatives library; the self-test none). */
+        negatives: List<FloatArray> = emptyList(),
     ): TeachClipResult {
         val analysis = FrameAnalysis(seg, StageTimes())
         var frameW = 0
@@ -105,7 +107,7 @@ object ClipJobs {
         }
         if (p.error != null) return TeachClipResult(null, "clip error: ${p.error}", sheet, frameW, frameH)
         val ts = session ?: return TeachClipResult(null, "no teach frames in the clip", sheet, frameW, frameH)
-        val built = ts.build({ eng.backbone.embed(it) }, KnnAdapter(eng.knn), emptyList()) { _, _ -> }
+        val built = ts.build({ eng.backbone.embed(it) }, KnnAdapter(eng.knn), negatives) { _, _ -> }
         return built.fold(
             { TeachClipResult(it, "taught ${it.twin.keyframeCount} keyframes", sheet, frameW, frameH) },
             { TeachClipResult(null, it.message ?: "teach failed", sheet, frameW, frameH) },

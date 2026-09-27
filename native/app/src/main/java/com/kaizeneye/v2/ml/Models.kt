@@ -50,9 +50,9 @@ object Models {
     val DINO_F32 = ModelAsset("dinov2_s14_448_fp32", "dinov2_s14_448_fp32.tflite", "6c44ca64acd23b38bc4e8f813f8792e1baf8c44c1ae2bf825ca15890481dc290")
     val DINO = BackboneSpec(
         name = "backbone_dinov2_s14_448",
-        // One variant on purpose: the runtime uses the first float variant as the CPU accuracy reference and benchmarks every
-        // variant; only the 44 MB fp16-weight file is pushed to the phone (parity vs PyTorch 0.99999, tools/dinov2/out).
-        variants = listOf(DINO_F16W),
+        // fp32 first (the CPU accuracy reference; plain float ops, the form the NPU / GPU compilers accept), the 44 MB
+        // fp16-weight file as the fallback when only it is on the phone. Both are adb-pushed, never bundled.
+        variants = listOf(DINO_F32, DINO_F16W),
         inputSize = 448, gh = 32, gw = 32, dim = 384,
         l2NormalizePatches = true,
     )

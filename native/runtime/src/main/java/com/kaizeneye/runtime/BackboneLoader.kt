@@ -204,7 +204,13 @@ internal object BackboneLoader {
         )
         store.writeTrying(key, cand.label, CrashGuard.Phase.PROBE)
         val t0 = System.currentTimeMillis()
-        return when (val o = probe.run(req, timeout)) {
+        val outcome = try {
+            probe.run(req, timeout)
+        } catch (t: Throwable) {
+            store.clearTrying()                      // a cancelled load must not be judged as a crash at the next start
+            throw t
+        }
+        return when (val o = outcome) {
             is ProbeClient.Outcome.Ok -> {
                 store.clearTrying()
                 if (o.reply.ok) {

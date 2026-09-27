@@ -95,6 +95,51 @@ object RoiSelect {
     private const val MIN_PIECE_FRAC = 0.03
     /** Pieces are merged only if the gap to the object is at most this fraction of the object's longer side. */
     private const val PIECE_GAP = 0.35
+    /** Whole view: a candidate larger than this fraction of the biggest one is another part, never a piece of it. */
+    private const val WHOLE_VIEW_MAX_PIECE_FRAC = 0.5
+
+    /**
+     * Whole-view counterpart of the circle merge: pieces of ONE part that the mask split (glare, holes) are joined onto the
+     * biggest candidate with the same gap rule, so a part taught with a circle (merged) judges the same without one.
+     * Candidates far from the biggest one stay separate parts. Returns [candidates] unchanged when nothing merges.
+     */
+    fun mergeSplitParts(a: Analysed, candidates: List<Component>): Pair<Analysed, List<Component>> {
+        if (candidates.size < 2) return a to candidates
+        val main = candidates.maxWith(compareBy<Component> { it.area }.thenByDescending { it.label })
+        // Only clearly smaller pieces are joined: a second part of similar size stays a part of its own.
+        val (pieces, rest) = gather(main, candidates.filter { it !== main && it.area <= WHOLE_VIEW_MAX_PIECE_FRAC * main.area })
+        if (pieces.size == 1) return a to candidates
+        val merged = merge(a, main, pieces)
+        val gone = pieces.map { it.label }.toSet()
+        val frame = a.withComponents(listOf(merged) + a.components.filter { it.label !in gone })
+        return frame to listOf(merged) + rest + candidates.filter { it !== main && it.area > WHOLE_VIEW_MAX_PIECE_FRAC * main.area }
+    }
+
+    /** Grows [main] by the pieces (from [others]) within reach; returns the pieces (main first) and the leftovers. */
+    private fun gather(main: Component, others: List<Component>): Pair<List<Component>, List<Component>> {
+        val pieces = arrayListOf(main)
+        val rest = others.filter { it.area >= MIN_PIECE_FRAC * main.area }.toMutableList()
+        val far = others.filter { it.area < MIN_PIECE_FRAC * main.area }.toMutableList()
+        var ox0 = main.minX; var oy0 = main.minY; var ox1 = main.maxX; var oy1 = main.maxY
+        var grew = true
+        while (grew) {
+            grew = false
+            val reach = PIECE_GAP * max(ox1 - ox0 + 1, oy1 - oy0 + 1)
+            val iter = rest.iterator()
+            while (iter.hasNext()) {
+                val c = iter.next()
+                val gapX = max(0, max(c.minX - ox1, ox0 - c.maxX))
+                val gapY = max(0, max(c.minY - oy1, oy0 - c.maxY))
+                if (gapX <= reach && gapY <= reach) {
+                    pieces += c
+                    iter.remove()
+                    ox0 = min(ox0, c.minX); oy0 = min(oy0, c.minY); ox1 = max(ox1, c.maxX); oy1 = max(oy1, c.maxY)
+                    grew = true
+                }
+            }
+        }
+        return pieces to (rest + far)
+    }
 
     fun apply(a: Analysed, roi: Roi, params: MaskParams): RoiPick {
         val tapLabel = if (roi.isTap) labelAt(a, roi.cx, roi.cy) else 0

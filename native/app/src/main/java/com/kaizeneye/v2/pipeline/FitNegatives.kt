@@ -21,28 +21,30 @@ object FitNegatives {
     /** Keyframes of another Twin that are scored (spread over its keyframes); each costs one k-NN search. */
     const val KEYFRAMES_PER_TWIN = 8
 
-    class Result(val fits: DoubleArray, val manual: Int, val twins: Int)
+    class Result(val fits: DoubleArray, val manual: Int, val twins: Int, val skipped: Int)
 
     fun compute(twin: TwinModel, repo: TwinRepo, knn: KnnBackend): Result {
         val fits = ArrayList<Double>()
         var manual = 0
         var twins = 0
+        var skipped = 0
         val np = twin.patches
         val d = twin.dim
-        try {
-            for (n in repo.negatives.list(twin.fingerprint)) {
-                val maps = repo.negatives.maps(n.id)
+        for (n in runCatching { repo.negatives.list(twin.fingerprint) }.getOrDefault(emptyList())) {
+            try {
+                val maps = repo.negatives.maps(n.id, np, d)
                 val best = maps.map { m -> twin.fitOf(FeatureMap(twin.gh, twin.gw, d, m.features), m.cov, knn) }.filter { !it.isNaN() }.minOrNull()
                 if (best != null) {
                     fits += best
                     manual++
                 }
+            } catch (t: Throwable) {
+                skipped++
+                Log.w("KaizenFit", "negative ${n.id} skipped", t)
             }
-        } catch (t: Throwable) {
-            Log.w("KaizenFit", "manual negatives skipped", t)
         }
-        try {
-            for (s in repo.store.list()) {
+        for (s in runCatching { repo.store.list() }.getOrDefault(emptyList())) {
+            try {
                 if (s.id == twin.id || s.fingerprint != twin.fingerprint) continue
                 val other = (repo.store.load(s.id, null) as? TwinLoadResult.Loaded)?.twin ?: continue
                 val k = other.keyframeCount
@@ -61,10 +63,11 @@ object FitNegatives {
                     fits += best
                     twins++
                 }
+            } catch (t: Throwable) {
+                skipped++
+                Log.w("KaizenFit", "twin ${s.id} skipped", t)
             }
-        } catch (t: Throwable) {
-            Log.w("KaizenFit", "other twins skipped", t)
         }
-        return Result(fits.toDoubleArray(), manual, twins)
+        return Result(fits.toDoubleArray(), manual, twins, skipped)
     }
 }

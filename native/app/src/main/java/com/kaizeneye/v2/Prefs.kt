@@ -62,9 +62,6 @@ class Prefs(private val ctx: Context) {
         get() = sp.getBoolean("voting", true)
         set(v) = sp.edit().putBoolean("voting", v).apply()
 
-    var muted: Boolean
-        get() = sp.getBoolean("muted", false)
-        set(v) = sp.edit().putBoolean("muted", v).apply()
 
     var cameraPreset: CameraPreset
         get() = sp.getString("cameraPreset", null)?.let { presetFromJson(JSONObject(it)) } ?: CameraPreset()

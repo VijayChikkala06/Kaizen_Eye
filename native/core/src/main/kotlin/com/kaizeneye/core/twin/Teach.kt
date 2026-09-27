@@ -244,7 +244,7 @@ object TeachBuilder {
         val nSeg = params.segments
         val seg = IntArray(kCount) {
             val t = frames[kfFrame[it]].tMs
-            min(nSeg - 1, floor(nSeg.toDouble() * (t - t0).toDouble() / ((t1 - t0).toDouble() + 1e-9)).toInt())
+            max(0, min(nSeg - 1, floor(nSeg.toDouble() * (t - t0).toDouble() / ((t1 - t0).toDouble() + 1e-9)).toInt()))
         }
         val segmentsUsed = seg.distinct().size
 
@@ -370,7 +370,8 @@ object TeachBuilder {
             lsoKeyframes = lsoKeyframes, positives = positives, negativeSims = negSims, timingsMs = timings,
         )
         if (kCount < 2) return TeachResult.Failure(TeachFailure.TOO_FEW_KEYFRAMES, diagnostics)
-        if (lso.isEmpty()) return TeachResult.Failure(TeachFailure.NO_LSO, diagnostics)
+        // All-zero LSO (identical frames) would make τ = 0 and every score infinite: not a usable Twin.
+        if (lso.isEmpty() || lso.max() <= 0.0 || lso.any { it.isNaN() }) return TeachResult.Failure(TeachFailure.NO_LSO, diagnostics)
 
         val tauTeach = params.tauFactor * lso.max()
         val identity = IdentityThreshold.derive(positives, negSims, params.identity)
@@ -420,7 +421,7 @@ object TeachBuilder {
                 geometry = geometry,
                 fit = params.fit?.let { fp ->
                     val fits = lsoKeyframes.map { lsoFitAll[it] }.filter { !it.isNaN() }.toDoubleArray()
-                    if (fits.isEmpty()) null else FitThreshold.derive(fits, DoubleArray(0), fp)
+                    if (fits.isEmpty() || fits.max() <= 0.0) null else FitThreshold.derive(fits, DoubleArray(0), fp)
                 },
             ),
             certificate = null,

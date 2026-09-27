@@ -18,7 +18,12 @@ import kotlinx.coroutines.SupervisorJob
  * the :vlm and :probe processes, which must not touch the camera or LiteRT vision stack).
  */
 class AppGraph private constructor(val context: Context) {
-    val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+    val scope = CoroutineScope(
+        SupervisorJob() + Dispatchers.Default +
+            kotlinx.coroutines.CoroutineExceptionHandler { _, t -> android.util.Log.e("KaizenApp", "background job failed", t) },
+    )
+    /** Camera permission as last observed (the preview re-binds when it is granted). */
+    val cameraGranted = kotlinx.coroutines.flow.MutableStateFlow(com.kaizeneye.v2.telemetry.Readiness.cameraGranted(context))
     val dirs = AppDirs(context).ensure()
     val prefs = Prefs(context)
     val log = JsonlLog(dirs.logs)

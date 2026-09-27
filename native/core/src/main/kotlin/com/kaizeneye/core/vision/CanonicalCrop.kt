@@ -31,6 +31,27 @@ object CanonicalCrop {
     fun square(
         labels: IntArray, w: Int, h: Int, component: Component, theta: Double, factor: Int, margin: Double,
     ): CanonicalSquare {
+        val sq = squareUnclamped(labels, w, h, component, theta, factor, margin)
+        // Never larger than the frame (a square wider than the frame would sample replicated edge pixels; §3 clamps too).
+        val limit = (factor * min(w, h)).toDouble()
+        return if (sq.side > limit) sq.copy(side = limit) else sq
+    }
+
+    /** Whether frame point ([x], [y]) (full-res pixels) lies inside the rotated square (spec §3 "inside", rotated). */
+    fun contains(sq: CanonicalSquare, x: Double, y: Double): Boolean {
+        val c = cos(sq.theta)
+        val s = sin(sq.theta)
+        val px = x - sq.cx
+        val py = y - sq.cy
+        val a = px * c + py * s
+        val b = -px * s + py * c
+        val half = sq.side / 2
+        return a >= -half && a < half && b >= -half && b < half
+    }
+
+    private fun squareUnclamped(
+        labels: IntArray, w: Int, h: Int, component: Component, theta: Double, factor: Int, margin: Double,
+    ): CanonicalSquare {
         val f = factor.toDouble()
         val cx0 = f * (component.minX + component.maxX + 1) / 2.0
         val cy0 = f * (component.minY + component.maxY + 1) / 2.0
@@ -117,11 +138,14 @@ object CanonicalCrop {
         return out
     }
 
-    /** Smallest angle difference helper for tests: `θ` mod π folded to `(−π/2, π/2]`. */
+    /** `θ` mod π folded to `(−π/2, π/2]`. */
     fun foldPi(theta: Double): Double {
         var t = theta % Math.PI
         if (t > Math.PI / 2) t -= Math.PI
         if (t <= -Math.PI / 2) t += Math.PI
-        return min(t, Math.PI / 2)
+        return t
     }
+
+    /** Below this covariance aspect (minor/major) a part has a stable principal axis; rounder parts are cropped at θ = 0. */
+    const val MIN_ASPECT_FOR_AXIS = 0.85
 }

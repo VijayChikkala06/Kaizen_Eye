@@ -182,7 +182,7 @@ class TeachSession(
                 val lines = listOf(
                     if (weak) {
                         "⚠ Weak teach: only $usable of $seen frames were usable (${tw.segmentsUsed} time blocks). Teach again with the part " +
-                            "circled, fully in view, hands away, turning slowly — a stronger Twin judges better."
+                            "circled, fully in view, hands away, turning slowly — a stronger part model judges better."
                     } else {
                         "Good teach: $usable of $seen frames usable over ${tw.segmentsUsed} time blocks."
                     },

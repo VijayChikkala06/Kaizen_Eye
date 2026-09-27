@@ -112,7 +112,7 @@ object VerdictEngine {
         orientation: Int = 0,
     ): Judgement {
         val idOk = sim >= tauId
-        val fitOk = tauFit.isNaN() || score.fit.isNaN() || score.fit <= tauFit
+        val fitOk = fitPasses(score.fit, tauFit)
         val (verdict, reason) = when {
             !idOk -> Verdict.NOT_ENROLLED to REASON_IDENTITY
             !geometry.ok -> Verdict.NOT_ENROLLED to REASON_SHAPE
@@ -129,8 +129,15 @@ object VerdictEngine {
         )
     }
 
+    /** The FIT gate (Fit.kt): no gate (NaN τ_fit) passes; a NaN fit with a gate never passes. */
+    fun fitPasses(fit: Double, tauFit: Double): Boolean = tauFit.isNaN() || (!fit.isNaN() && fit <= tauFit)
+
+    /** A score that could not be computed (NaN / infinite distances): REFRAME, never PASS. */
+    const val REASON_SCORE = "SCORE_FAILED"
+
     /** Steps 3–5 on a score: PASS, NOT_ENROLLED ("coverage") or DEFECT; reason null for PASS / DEFECT. */
     fun scoreVerdict(s: Double, anomalousFraction: Double, coverageCut: Double): Pair<Verdict, String?> = when {
+        s.isNaN() || s.isInfinite() -> Verdict.REFRAME to REASON_SCORE
         s <= 1.0 -> Verdict.PASS to null
         anomalousFraction > coverageCut -> Verdict.NOT_ENROLLED to REASON_COVERAGE
         else -> Verdict.DEFECT to null
@@ -147,8 +154,17 @@ object VerdictEngine {
      * with that crop's `a` and peak: 3 values → the middle one, 2 values → the higher one; ties → the earlier crop.
      * The identity / geometry results stay those of [first].
      */
-    fun vote(first: Judgement, extras: List<ScoreResult?>, coverageCut: Double, params: VoteParams = VoteParams()): VoteOutcome {
+    fun vote(
+        first: Judgement,
+        extras: List<ScoreResult?>,
+        coverageCut: Double,
+        params: VoteParams = VoteParams(),
+        /** CANONICAL: the orientation (0 = θ, 1 = θ + π) each extra crop was scored at, parallel to [extras]. */
+        orientations: IntArray? = null,
+    ): VoteOutcome {
         require(first.scored) { "the first crop must be scored" }
+        // Only a DEFECT is voted on (spec §9): the identity / shape / fit gates of the first crop are never re-opened.
+        if (first.verdict != Verdict.DEFECT) return VoteOutcome(doubleArrayOf(first.s), 0, first)
         val used = extras.take(params.maxExtra)
         val s = DoubleArray(1 + used.size) { if (it == 0) first.s else used[it - 1]?.s ?: Double.NaN }
         val avail = s.indices.filter { !s[it].isNaN() }
@@ -164,11 +180,14 @@ object VerdictEngine {
             first.copy(votes = avail.size)
         } else {
             val sc = used[chosen - 1]!!
-            val (verdict, reason) = scoreVerdict(sc.s, sc.anomalousFraction, coverageCut)
+            // The chosen crop's fit gate applies to it as well (a crop that fits worse than any same-part crop is not a PASS).
+            val fitOk = fitPasses(sc.fit, first.tauFit)
+            val (verdict, reason) = if (!fitOk) Verdict.NOT_ENROLLED to REASON_FIT else scoreVerdict(sc.s, sc.anomalousFraction, coverageCut)
             first.copy(
                 verdict = verdict, reason = reason, raw = sc.raw, s = sc.s, tau = sc.tau, sensitivity = sc.sensitivity,
                 anomalousFraction = sc.anomalousFraction, areaPct = sc.areaPct, coreCount = sc.coreCount,
                 peakRow = sc.peakRow, peakCol = sc.peakCol, smoothed = sc.smoothed, dmap = sc.dmap, votes = avail.size,
+                fit = sc.fit, fitOk = fitOk, orientation = orientations?.getOrNull(chosen - 1) ?: first.orientation,
             )
         }
         val final = if (chosen == 0) {

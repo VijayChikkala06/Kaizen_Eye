@@ -23,7 +23,7 @@ object FlickerCheck {
     ) {
         fun describe(): String {
             val nums = "banding %.1f, drift %.1f, pumping %.1f %%".format(bandingLevels, temporalBanding, pumpingPct)
-            return if (flicker) "FLICKER ($nums) → use 10 ms exposure" else "no flicker ($nums)"
+            return if (flicker) "flicker ($nums)" else "no flicker ($nums)"
         }
     }
 

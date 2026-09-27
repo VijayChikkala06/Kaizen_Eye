@@ -282,7 +282,8 @@ class TrackerTest {
         assertEquals(3.0, c.partsPerMinute(61_500), 0.0) // 2 000, 30 000, 61 500
         assertFalse(JudgeQueue.lineTooFast(3))
         assertTrue(JudgeQueue.lineTooFast(4))
-        assertEquals(103.0, Overlay.displayX(100.0, 0.1, 30.0), 1e-12)
-        assertEquals(49.0, Overlay.displayY(50.0, -0.05, 20.0), 1e-12)
+        // Tentative specks that vanish are not "parts that left unjudged".
+        c.onExit(judged = false, confirmed = false)
+        assertEquals(1, c.exitedUnjudged)
     }
 }

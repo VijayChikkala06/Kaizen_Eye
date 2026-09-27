@@ -33,8 +33,8 @@ class ReplayRegression(private val g: AppGraph, @Suppress("unused") private val 
         // features) only the mechanics are compared: same parts triggered at the same times, verdict classes free.
         val current = g.engines.ready()?.choice
         val mechanicsOnly = current != null && current.id != Models.R18_CHOICE.id
-        val eng = (if (mechanicsOnly) g.engines.ready() else g.engines.ensure(Models.R18_CHOICE))
-            ?: return "FAIL ResNet18 backbone not loaded (${g.engines.badge()})"
+        // Only an already loaded engine is used (loading another one here would close the engine the app is using).
+        val eng = g.engines.ready() ?: return "SKIP model still loading (${g.engines.badge()}) — run the self-test again"
         val teach = expected.getJSONObject("teach")
         val window = teach.getLong("startMs")..teach.getLong("endMs")
         // The laptop reference teaches from EVERY frame of the window (script.json) — sample every frame here too.

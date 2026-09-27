@@ -254,7 +254,7 @@ class TwinStore(val rootDir: File) {
             F16File.write(File(tmp, KF_COV), k, twin.patches, twin.kfCov)
             F16File.write(File(tmp, NEGATIVES), twin.negativeCount, d, twin.negatives)
             twin.thresholds.fit?.let { f ->
-                val fj = FitJson(FitParams().factor, f.pos.toList(), f.cal.toList())
+                val fj = FitJson(f.params.factor, f.pos.toList(), f.cal.toList())
                 File(tmp, FIT_JSON).writeText(TwinJsonCodec.json.encodeToString(FitJson.serializer(), fj), Charsets.UTF_8)
             }
             val kfDir = File(tmp, KEYFRAMES_DIR).also { it.mkdirs() }
@@ -269,7 +269,12 @@ class TwinStore(val rootDir: File) {
                 val old = File(rootDir, twin.id + OLD)
                 if (old.exists()) old.deleteRecursively()
                 move(dst, old)
-                move(tmp, dst)
+                try {
+                    move(tmp, dst)
+                } catch (e: Throwable) {
+                    if (!dst.exists() && old.exists()) move(old, dst)          // never lose the previous Twin
+                    throw e
+                }
                 old.deleteRecursively()
             } else {
                 move(tmp, dst)
@@ -412,13 +417,16 @@ class TwinStore(val rootDir: File) {
     private fun readFit(dir: File): FitThreshold? {
         val f = File(dir, FIT_JSON)
         if (!f.isFile) return null
+        // A damaged sidecar degrades the Twin to a spec-only one (no fit gate) rather than making it unloadable.
         return try {
             val j = TwinJsonCodec.json.decodeFromString(FitJson.serializer(), f.readText(Charsets.UTF_8))
             FitThreshold.derive(j.pos.toDoubleArray(), DoubleArray(0), FitParams(j.factor), j.cal.toDoubleArray())
         } catch (e: SerializationException) {
-            throw TwinFormatException("bad $FIT_JSON: ${e.message}", e)
+            null
         } catch (e: IllegalArgumentException) {
-            throw TwinFormatException("bad $FIT_JSON: ${e.message}", e)
+            null
+        } catch (e: IOException) {
+            null
         }
     }
 

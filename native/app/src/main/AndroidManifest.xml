@@ -38,7 +38,7 @@
 
         <activity
             android:name=".MainActivity"
-            android:configChanges="orientation|screenSize|keyboardHidden"
+            android:configChanges="orientation|screenSize|keyboardHidden|uiMode|screenLayout|smallestScreenSize|density|fontScale"
             android:exported="true"
             android:launchMode="singleTop"
             android:screenOrientation="portrait">

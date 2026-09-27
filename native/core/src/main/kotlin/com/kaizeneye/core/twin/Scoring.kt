@@ -99,10 +99,12 @@ object Scoring {
             ScoreRule.SMOOTHED_MAX -> {
                 val sm = smoothed ?: smoothMasked(d, sets.gh, sets.gw, sets.s)
                 var best = Double.NEGATIVE_INFINITY
+                // A non-finite distance anywhere in S poisons the score (NaN -> the verdict engine reframes, never PASS).
+                for (p in sets.sIdx) if (sm[p].isNaN() || sm[p].isInfinite()) return Double.NaN
                 for (p in sets.sIdx) if (sm[p] > best) best = sm[p]
                 best
             }
-            ScoreRule.TOP1_MEAN -> topMean(d, sets.sIdx, topFraction)
+            ScoreRule.TOP1_MEAN -> if (sets.sIdx.any { d[it].isNaN() || d[it].isInfinite() }) Double.NaN else topMean(d, sets.sIdx, topFraction)
         }
     }
 
@@ -183,7 +185,10 @@ object Scoring {
     fun fit(d: DoubleArray, sets: PatchSets): Double {
         if (sets.coreIdx.isEmpty()) return Double.NaN
         var sum = 0.0
-        for (p in sets.coreIdx) sum += d[p]
+        for (p in sets.coreIdx) {
+            if (d[p].isNaN() || d[p].isInfinite()) return Double.NaN
+            sum += d[p]
+        }
         return sum / sets.coreIdx.size
     }
 

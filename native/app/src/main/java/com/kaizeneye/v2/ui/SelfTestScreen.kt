@@ -36,7 +36,7 @@ fun SelfTestScreen(g: AppGraph, nav: Navigator, autoStart: String?) {
                 SecondaryButton("Quick", Modifier.weight(1f), enabled = !ui.running) { g.hub.runSelfTest("quick") }
             }
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                SecondaryButton("Accelerators", Modifier.weight(1f), enabled = !ui.running) { g.hub.runSelfTest("accel") }
+                SecondaryButton("Accel", Modifier.weight(1f), enabled = !ui.running) { g.hub.runSelfTest("accel") }
                 SecondaryButton("Replay", Modifier.weight(1f), enabled = !ui.running) { g.hub.runSelfTest("replay") }
                 SecondaryButton("VLM", Modifier.weight(1f), enabled = !ui.running) { g.hub.runSelfTest("vlm") }
             }

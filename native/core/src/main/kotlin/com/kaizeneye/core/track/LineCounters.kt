@@ -47,10 +47,10 @@ class LineCounters(val windowMs: Long = 60_000L, val capacity: Int = 4096) {
         if (size < capacity) size++
     }
 
-    /** A track left the view (§11.2 `EXITED`); counts it if it was never judged. */
+    /** A track left the view (§11.2 `EXITED`); counts it if it was a confirmed part that was never judged (specks are not parts). */
     @Synchronized
-    fun onExit(judged: Boolean) {
-        if (!judged) exitedUnjudged++
+    fun onExit(judged: Boolean, confirmed: Boolean = true) {
+        if (!judged && confirmed) exitedUnjudged++
     }
 
     /** Judged parts per minute over the window ending at [nowMs] (`(nowMs − windowMs, nowMs]`). */
@@ -90,13 +90,4 @@ object JudgeQueue {
 
     /** "Line too fast" when the judge queue holds more than [maxJobs] jobs. */
     fun lineTooFast(queuedJobs: Int, maxJobs: Int = DEFAULT_MAX_JOBS): Boolean = queuedJobs > maxJobs
-}
-
-/** Overlay helpers (spec §11.6). */
-object Overlay {
-    /** Displayed box centre x = `cx + vx · latencyMs` (latency = measured camera-to-screen delay). */
-    fun displayX(cx: Double, vx: Double, latencyMs: Double): Double = cx + vx * latencyMs
-
-    /** Displayed box centre y = `cy + vy · latencyMs`. */
-    fun displayY(cy: Double, vy: Double, latencyMs: Double): Double = cy + vy * latencyMs
 }

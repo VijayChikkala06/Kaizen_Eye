@@ -68,7 +68,7 @@ class JudgedPart(
  */
 class LineSession(
     private val g: AppGraph,
-    val twin: TwinModel,
+    twin0: TwinModel,
     val mode: LineMode,
     val source: String,
     private val engines: EngineHolder.State.Ready,
@@ -88,6 +88,15 @@ class LineSession(
     /** "H"/"V" = screen motion; the photo-eye's sensor axis is resolved from the first frame's rotation. null = keep the config axis. */
     private val screenMotion: String? = null,
 ) {
+    /** The Twin judged; swapped in place when its gates are re-derived (fit negatives, calibration) - same pipeline only. */
+    @Volatile var twin: TwinModel = twin0
+        private set
+
+    fun twinUpdated(t: TwinModel) {
+        require(t.fingerprint == twin.fingerprint) { "another pipeline" }
+        twin = t
+    }
+
     private val gh = twin.gh
     private val gw = twin.gw
     private val dim = twin.dim
@@ -95,6 +104,8 @@ class LineSession(
     private val factor = analysis.factor
     /** Accuracy mode: pose-normalised crops (θ and θ + π). Off for the spec pipeline and for the eval export (axis-aligned crops). */
     private val canonical = twin.pipeline.rotation == RotationRule.CANONICAL && exportCropSize == 0
+    /** Camera line or the interactive Replay screen: reject cards + explanations are shown; batch jobs get verdicts only. */
+    private val interactive = live || source.startsWith("replay:")
     private val knn = KnnAdapter(engines.knn)
     private val badge = engines.backbone.report.badge
 
@@ -142,10 +153,12 @@ class LineSession(
         circleRequest = Triple(roi, strokeId, onResult)
     }
 
-    /** Back to the whole view. */
+    @Volatile private var clearRequested = false
+
+    /** Back to the whole view (applied on the frame thread; a pending circle judge is cancelled). */
     fun clearCircle() {
         circleRequest = null
-        zone = null
+        clearRequested = true
     }
 
     private class Mark(
@@ -155,7 +168,10 @@ class LineSession(
         val rot: Double = 0.0,
     )
 
-    private class Job(val fired: FiredTrigger, val snaps: List<CropSnapshot>, val arrivalNs: Long, val cxAtSnap: Double, val cyAtSnap: Double)
+    private class Job(val fired: FiredTrigger, val snaps: List<CropSnapshot>, val arrivalNs: Long, val cxAtSnap: Double, val cyAtSnap: Double) {
+        /** Set once the verdict has been counted (a later failure must not count the part twice). */
+        @Volatile var counted = false
+    }
 
     // ------------------------------------------------------------------------------------------------ FAST LOOP
     fun onFrame(frame: CameraFrame) {
@@ -163,6 +179,13 @@ class LineSession(
         val arrival = System.nanoTime()
         val a0 = analysis.analyse(frame, sheet)
         lastFrameTms = a0.tMs
+        if (clearRequested) {
+            clearRequested = false
+            manual?.let { (oldId, _, oldCb) -> oldCb(CircleResult(oldId, false, "Whole view")) }
+            manual = null
+            zone = null
+            zoneBefore = null
+        }
         circleRequest?.let { (roi, id, cb) ->
             circleRequest = null
             manual?.let { (oldId, _, oldCb) -> oldCb(CircleResult(oldId, false, "Replaced by the new circle")) }
@@ -172,17 +195,29 @@ class LineSession(
         }
         val z = zone
         val pick = z?.let { RoiSelect.apply(a0, it, analysis.params) }
-        val a = pick?.analysed ?: a0
         val tr = tracker ?: run {
-            val axis = screenMotion?.let { sensorAxisFor(it, a.rotation) } ?: triggerConfig.axis
-            activeConfig = triggerConfig.copy(axis = axis, position = lineFraction * if (axis == Axis.X) a.w else a.h)
-            Tracker(a.w, a.h, activeConfig)
+            val axis = screenMotion?.let { sensorAxisFor(it, a0.rotation) } ?: triggerConfig.axis
+            activeConfig = triggerConfig.copy(axis = axis, position = lineFraction * if (axis == Axis.X) a0.w else a0.h)
+            Tracker(a0.w, a0.h, activeConfig)
         }.also { tracker = it }
         val t0 = System.nanoTime()
         // Only part-sized blobs are tracked; detections (and assignments) index into [comps].
         // With a circled area, the circled object is the only candidate (everything outside is ignored).
-        val comps = if (pick != null) listOfNotNull(pick.obj?.takeIf { it.area >= analysis.params.minAreaFrac * a.w * a.h })
-        else a.partCandidates(analysis.params.minAreaFrac)
+        val comps: List<com.kaizeneye.core.model.Component>
+        val a: Analysed
+        if (pick != null) {
+            a = pick.analysed
+            comps = listOfNotNull(pick.obj?.takeIf { it.area >= analysis.params.minAreaFrac * a.w * a.h })
+        } else if (canonical) {
+            // Accuracy mode: glare-split pieces of one part are joined (as the circle does), so a part taught circled judges
+            // the same in the whole view. Off for the spec pipeline (replay regression / eval parity).
+            val (merged, list) = RoiSelect.mergeSplitParts(a0, a0.partCandidates(analysis.params.minAreaFrac))
+            a = merged
+            comps = list
+        } else {
+            a = a0
+            comps = a0.partCandidates(analysis.params.minAreaFrac)
+        }
         val upd = tr.update(a.tMs, Detections.of(comps, a.grey, a.w, a.h, a.index))
         stages.record("track", (System.nanoTime() - t0) / 1e6)
         manual?.let { (id, deadline, cb) -> manualJudge(a, pick, comps, upd, tr, id, deadline, cb, arrival) }
@@ -208,7 +243,7 @@ class LineSession(
             judgeExec.execute { runJudge(job) }
         }
         for (e in upd.exits) {
-            counters.onExit(e.judged)
+            counters.onExit(e.judged, e.confirmed)
             val prefix = e.trackId.toLong() shl 32
             snapshots.keys.removeIf { it and (0xFFFFFFFFL shl 32) == prefix }
             marks.remove(e.trackId)
@@ -218,7 +253,7 @@ class LineSession(
         manyBlobFrames = if (z == null && a.components.size >= MANY_BLOBS) manyBlobFrames + 1 else 0
         if (live) {
             // Slow empty-sheet adaptation (twin-spec §2.1, live only): follow gradual lighting drift while nothing is in view.
-            if (a0.components.isEmpty()) sheet.adapt(a.small)
+            if (a0.components.isEmpty() && tr.liveTracks == 0) sheet.adapt(a.small)
             governorTick(a.tMs, a.components.isNotEmpty())
         }
         countFps(a.tMs)
@@ -240,7 +275,8 @@ class LineSession(
             if (a.tMs > deadline) {
                 manual = null
                 zone = zoneBefore
-                cb(CircleResult(strokeId, false, "Nothing found inside the circle — circle the part again"))
+                zoneBefore = null
+                cb(CircleResult(strokeId, false, if (obj != null) "The circled object is too small — move the phone closer" else "Nothing found inside the circle — circle the part again"))
             }
             return
         }
@@ -274,7 +310,7 @@ class LineSession(
         vlmMode = st.vlmMode
         // Headroom-only L2 (status still below SEVERE) is "near the limit", not "hot": say what was measured.
         banner = st.banner?.let {
-            if (th.status < 3) String.format(java.util.Locale.ROOT, "Near the thermal limit (headroom %.2f) — slowed to %d fps, explanations paused", th.headroom, st.fps) else it
+            if (th.status < 3) "Phone is getting warm — slowed to ${st.fps} fps" else it
         }
         governorLine = "${st.level} · ${st.fps} fps${if (isIdle) " (idle)" else ""} · ${th.statusName}"
         if (st.changed) g.camera.setAnalysisFpsCap(st.fps)
@@ -386,6 +422,9 @@ class LineSession(
         } catch (t: Throwable) {
             Log.e(TAG, "judge failed", t)
             g.log.write("error", JSONObject().put("where", "judge").put("error", t.toString()))
+            // Never drop a part silently: it shows as REFRAME "error" and is counted (once).
+            marks.computeIfPresent(job.fired.trackId) { _, _ -> Mark(OverlayState.REFRAME, "error — show again", null, null, 0.0, 0.0) }
+            if (!job.counted) counters.onVerdict(job.fired.tMs, Verdict.REFRAME)
         } finally {
             pending.decrementAndGet()
         }
@@ -393,11 +432,13 @@ class LineSession(
 
     private fun judge(job: Job) {
         val judgeStart = System.nanoTime()
-        val snaps = job.snaps
-        val s0 = snaps.firstOrNull()
+        // The best-quality buffered crop is judged, unless it is not sane (a hand next to the part at the sharpest moment)
+        // and another buffered crop is: that one is judged and the rest stay voting candidates.
+        val s0 = job.snaps.firstOrNull { it.sanity == SanityReason.OK } ?: job.snaps.firstOrNull()
+        val snaps = if (s0 == null) job.snaps else listOf(s0) + job.snaps.filter { it !== s0 }
         var embedMs = Double.NaN
         var used = s0
-        val canon = s0?.canon
+        val canon = s0?.canon?.takeIf { it.altCrop.isNotEmpty() }
         var judgement: Judgement = when {
             s0 == null -> VerdictEngine.reframe(SanityReason.TOUCHES_BORDER, gh, gw)
             s0.sanity != SanityReason.OK -> VerdictEngine.reframe(s0.sanity, gh, gw)
@@ -428,13 +469,12 @@ class LineSession(
         if (s0 != null && votingEnabled && VerdictEngine.needsVote(judgement) && snaps.size > 1) {
             val extras = snaps.drop(1).filter { it.sanity == SanityReason.OK }.take(2)
             if (extras.isNotEmpty()) {
-                if (canonical && extras.all { it.canon != null }) {
+                if (canonical && extras.all { it.canon != null && it.canon.altCrop.isNotEmpty() }) {
                     val pairs = extras.map { cropInput(it.crop, it.cov) to cropInput(it.canon!!.altCrop, it.canon.altCov) }
                     val vote = twin.voteCanonical(judgement, pairs, knn, sensitivity)
                     judgement = vote.judgement
                     used = if (vote.chosen == 0) s0 else extras.getOrNull(vote.chosen - 1) ?: s0
-                    // The voted crop's own orientation is not tracked; keep the first crop's (the heat map stays on the primary).
-                    if (vote.chosen != 0) orientation = 0
+                    orientation = judgement.orientation                   // the chosen crop's own orientation
                 } else {
                     val inputs = extras.map { CropInput(twin.pipeline.prepareFeatures(FeatureMap(gh, gw, dim, engines.backbone.embed(it.crop))), it.cov) }
                     val vote = twin.vote(judgement, inputs, knn, sensitivity)
@@ -449,6 +489,7 @@ class LineSession(
         stages.record("trigger→verdict", firstLatency)
         val tMs = job.fired.tMs
         counters.onVerdict(tMs, judgement.verdict)
+        job.counted = true
         val isReject = judgement.verdict == Verdict.DEFECT || judgement.verdict == Verdict.NOT_ENROLLED
         consecutiveRejects = if (isReject) consecutiveRejects + 1 else if (judgement.verdict == Verdict.PASS) 0 else consecutiveRejects
         val label = when (judgement.verdict) {
@@ -458,15 +499,17 @@ class LineSession(
             Verdict.REFRAME -> "REFRAME"
         }
         val heat = judgement.smoothed?.let { sm -> heatValues(sm, judgement.tau * judgement.sensitivity) }
-        marks[job.fired.trackId] = Mark(
-            stateOf(judgement.verdict), label, if (judgement.verdict == Verdict.DEFECT) heat else null, used?.square, job.cxAtSnap, job.cyAtSnap,
+        val mark = Mark(
+            stateOf(judgement.verdict), label, if (judgement.verdict == Verdict.DEFECT) heat else null, used?.square,
+            used?.component?.cx ?: job.cxAtSnap, used?.component?.cy ?: job.cyAtSnap,
             rot = used?.canon?.angle(orientation) ?: 0.0,
         )
+        marks.computeIfPresent(job.fired.trackId) { _, _ -> mark }         // the track may have left the view meanwhile
 
         if (isReject) {
             rejectNo++
             if (live) g.alarm.reject(consecutiveRejects)
-            publishReject(judgement, used, rejectNo, orientation)
+            if (interactive) publishReject(judgement, used, rejectNo, orientation)     // batch jobs (clips / eval) never explain or write files
         }
         if (mode == LineMode.CALIBRATE) {
             val sane = judgement.verdict != Verdict.REFRAME
@@ -489,7 +532,7 @@ class LineSession(
                 .put("fit", judgement.fit.jsonSafe()).put("tauFit", judgement.tauFit.jsonSafe()).put("orientation", orientation)
                 .put("geometryFailures", judgement.geometryFailures.joinToString()).put("votes", judgement.votes)
                 .put("latencyMs", firstLatency).put("embedMs", embedMs.jsonSafe()).put("judgeMs", (System.nanoTime() - judgeStart) / 1e6)
-                .put("accel", badge).put("queue", pending.get()),
+                .put("accel", badge).put("queue", pending.get() - 1),
         )
         onJudged?.invoke(JudgedPart(job.fired.trackId, job.fired.trigger, tMs, judgement, used, firstLatency))
     }
@@ -504,7 +547,7 @@ class LineSession(
     /** Heat 0..1: 0 at ≤ 0.6·τ, 1 at ≥ 1.2·τ (only the hot end is drawn). NaN (outside S) → 0. */
     private fun heatValues(sm: DoubleArray, tauEff: Double): FloatArray = FloatArray(sm.size) { i ->
         val v = sm[i]
-        if (v.isNaN() || tauEff <= 0) 0f else (((v / tauEff) - 0.6) / 0.6).coerceIn(0.0, 1.0).toFloat()
+        if (v.isNaN() || tauEff.isNaN() || tauEff <= 0) 0f else (((v / tauEff) - 0.6) / 0.6).coerceIn(0.0, 1.0).toFloat()
     }
 
     /** Backbone features of one crop in pipeline space (DINOv2: patch-normalised). */
@@ -534,7 +577,7 @@ class LineSession(
             vlmReady && vlmMode == VlmMode.ON_TAP -> "tap to explain"
             else -> "template"
         }
-        val card = RejectCard(number, "${if (j.verdict == Verdict.DEFECT) "REJECT" else "NOT THE ENROLLED PART"} #%03d".format(number), FactsLine.render(facts), template, source, cropFile, System.currentTimeMillis())
+        val card = RejectCard(number, "${if (j.verdict == Verdict.DEFECT) "REJECT" else "NOT THE PART"} #%03d".format(number), FactsLine.render(facts), template, source, cropFile, System.currentTimeMillis())
         lastReject = card
         lastRejectFacts = facts
         if (auto) explain(card, facts)
@@ -550,7 +593,12 @@ class LineSession(
     private fun explain(card: RejectCard, facts: Facts) {
         val crop = card.cropFile ?: return
         g.scope.launch {
-            val r = g.vlm.explain(crop, VlmPrompt.build(facts), timeoutMs = 4000)
+            val r = try {
+                g.vlm.explain(crop, VlmPrompt.build(facts), timeoutMs = 4000)
+            } catch (t: Throwable) {
+                Log.w(TAG, "explain failed", t)
+                return@launch
+            }
             val text = r.text?.trim().orEmpty()
             val (sentence, src) = if (text.isNotEmpty()) {
                 val guard = LocationGuard.check(text, facts)

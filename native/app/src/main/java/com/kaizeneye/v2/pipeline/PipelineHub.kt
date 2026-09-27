@@ -23,6 +23,7 @@ import com.kaizeneye.v2.util.Images
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import org.json.JSONObject
 import java.io.File
@@ -90,7 +91,14 @@ class PipelineHub(val g: AppGraph) {
 
     init {
         g.scope.launch {
-            g.engines.state.collect { if (it is EngineHolder.State.Ready) refreshTwins() }
+            g.engines.state.collect { st ->
+                when (st) {
+                    is EngineHolder.State.Ready -> refreshTwins()
+                    // The old backbone / k-NN are closed once the new one is up: nothing may keep judging with them.
+                    is EngineHolder.State.Loading -> onEngineReloading()
+                    else -> Unit
+                }
+            }
         }
         selfTestRunner.replayStep = { out -> ReplayRegression(g, this).run(out) }
         selfTestRunner.coreStep = { out -> CoreOnDevice(g).run(out) }
@@ -109,7 +117,7 @@ class PipelineHub(val g: AppGraph) {
                     }
                     val done = sc.offer(f)
                     _sheet.value = _sheet.value.copy(progress = sc.progress)
-                    if (done) finishSheet(sc)
+                    if (done && sheetCapture === sc) finishSheet(sc)
                 }
                 Mode.PREVIEW -> sheetModel?.let { sh ->
                     val pc = pendingTeachCircle
@@ -165,6 +173,8 @@ class PipelineHub(val g: AppGraph) {
     private fun finishSheet(sc: SheetCapture) {
         mode = Mode.IDLE
         sheetCapture = null
+        val then = afterSheet                                              // taken now: a screen change meanwhile drops it
+        afterSheet = null
         val r = try {
             sc.finish()
         } catch (t: Throwable) {
@@ -173,6 +183,23 @@ class PipelineHub(val g: AppGraph) {
         }
         sheetModel = r.sheet
         // Freeze exposure / white balance / focus now, so parts entering the view cannot change the background.
+        if (r.flicker.flicker) {
+            val p = g.camera.currentPreset()
+            if (p.manualExposure && p.exposureNs < 10_000_000L) {
+                // Flicker at a short exposure: switch to the 10 ms preset and learn the sheet AGAIN with it (a sheet learned at
+                // 2 ms would be ~5x too dark for 10 ms frames). Only the exposure is persisted, never the AE/AWB/focus locks.
+                val safe = p.flickerSafe().copy(aeLock = false, awbLock = false, focusDiopters = null)
+                g.prefs.cameraPreset = safe
+                sheetModel = null
+                _sheet.value = SheetUi(SheetUi.State.CAPTURING, "Flicker detected — switching to a 10 ms exposure and learning the sheet again…", null, 0f)
+                g.camera.applyPreset(safe)
+                afterSheet = then
+                sheetSettle = SHEET_SETTLE_FRAMES
+                sheetCapture = SheetCapture(camAnalysis, SHEET_FRAMES)
+                mode = Mode.SHEET
+                return
+            }
+        }
         val locked = g.camera.lockForInspection()
         _sheet.value = SheetUi(SheetUi.State.READY, r.describe(), r.flicker.describe() + " · camera locked", 1f)
         if (previewWanted && afterSheet == null && _teach.value is TeachUi.Idle) mode = Mode.PREVIEW
@@ -182,23 +209,55 @@ class PipelineHub(val g: AppGraph) {
                 .put("banding", r.flicker.bandingLevels).put("drift", r.flicker.temporalBanding).put("pumpingPct", r.flicker.pumpingPct)
                 .put("flicker", r.flicker.flicker).put("uniform", r.uniform).put("camera", locked.describe()),
         )
-        if (r.flicker.flicker) {
-            val p = g.camera.currentPreset()
-            if (p.manualExposure && p.exposureNs < 10_000_000L) {
-                val safe = p.flickerSafe()
-                g.camera.applyPreset(safe)
-                g.prefs.cameraPreset = safe
-            }
+        then?.invoke()
+    }
+
+    /**
+     * Leaving any camera screen (or opening another one): nothing from the previous screen may keep running on the next
+     * screen's frames — a teach recording, a pending sheet capture with its follow-up, a circle. The screen's own session
+     * (line / negatives) is stopped by its own stop* call.
+     */
+    private fun leaveCameraScreen() {
+        if (mode == Mode.SHEET || mode == Mode.PREVIEW || mode == Mode.TEACH) mode = Mode.IDLE
+        afterSheet = null
+        sheetCapture = null
+        if (_sheet.value.state == SheetUi.State.CAPTURING) _sheet.value = SheetUi()
+        teachSession = null
+        pendingTeachCircle = null
+        circleCheck = null
+        circleBefore = null
+        if (_teach.value is TeachUi.Recording) _teach.value = TeachUi.Idle
+    }
+
+    /** The engine is being replaced: every session built on the old one stops now (its native buffers are about to close). */
+    private fun onEngineReloading() {
+        val hadLine = lineSession != null || replay != null
+        stopLine()
+        stopNegatives()
+        fitJob?.cancel()
+        if (_teach.value is TeachUi.Recording || _teach.value is TeachUi.Building) {
+            _teach.value = TeachUi.Failed("The model was reloaded during the teach — record again.")
         }
-        afterSheet?.let { afterSheet = null; it() }
+        leaveCameraScreen()
+        invalidateSheet()
+        if (hadLine) _inspect.value = _inspect.value.copy(running = false, needsSheet = true, hint = "The model was reloaded — tap LEARN SHEET to continue.")
+    }
+
+    /** Inspect / Negatives screen left: nothing of it may run on the next screen's frames. */
+    fun closeCameraScreen() {
+        stopLine()
+        stopNegatives()
+        leaveCameraScreen()
     }
 
     /** Teach screen opened: learn a fresh sheet on this camera session (Step 1), then show the live detection box. */
     fun openTeach() {
         previewWanted = true
-        if (_teach.value is TeachUi.Idle || _teach.value is TeachUi.Failed || _teach.value is TeachUi.Armed) {
+        stopLine()
+        stopNegatives()
+        leaveCameraScreen()
+        if (_teach.value !is TeachUi.Building) {
             _teach.value = TeachUi.Idle
-            mode = Mode.IDLE
             invalidateSheet()
             _teachView.value = InspectUi()
         }
@@ -206,18 +265,20 @@ class PipelineHub(val g: AppGraph) {
 
     fun closeTeach() {
         previewWanted = false
-        if (mode == Mode.PREVIEW) mode = Mode.IDLE
+        leaveCameraScreen()
     }
 
     /** Inspect/calibrate screen opened: nothing runs until the operator clears the sheet and taps LEARN SHEET. */
     fun openInspect(lineMode: LineMode) {
         stopLine()
+        stopNegatives()
+        leaveCameraScreen()
         pendingLineMode = lineMode
         invalidateSheet()
         val twin = activeTwin
         _inspect.value = InspectUi(
             running = false, mode = lineMode.name, twinName = twin?.name ?: "", needsSheet = true,
-            hint = if (twin == null) "No Twin yet: go back and teach a part first." else null,
+            hint = if (twin == null) "No part yet: go back and teach a part first." else null,
             sensitivity = twin?.let { g.prefs.sensitivity(it.id) } ?: 1f,
         )
     }
@@ -238,7 +299,10 @@ class PipelineHub(val g: AppGraph) {
                 val eng = g.engines.ready()
                 val running = eng?.let { TwinRepo.runningPipeline(it) }
                 val list = repo.summaries(running)
-                val id = g.prefs.activeTwinId ?: list.firstOrNull { it.loadable }?.id
+                val preferred = g.prefs.activeTwinId
+                val id = preferred?.takeIf { p -> list.any { it.id == p && it.loadable } } ?: list.firstOrNull { it.loadable }?.id
+                val stale = running != null && activeTwin != null && activeTwin?.fingerprint != running.fingerprint()
+                if (stale) activeTwin = null
                 if (id != null && running != null && activeTwin?.id != id) {
                     when (val r = repo.load(id, running)) {
                         is TwinLoadResult.Loaded -> setActive(r.twin, persist = false)
@@ -262,7 +326,7 @@ class PipelineHub(val g: AppGraph) {
         refreshFitNegatives()
     }
 
-    private var fitJob: kotlinx.coroutines.Job? = null
+    @Volatile private var fitJob: kotlinx.coroutines.Job? = null
 
     /**
      * Re-derives the active Twin's FIT gate against every known different object (other Twins, negatives library) in the
@@ -273,30 +337,44 @@ class PipelineHub(val g: AppGraph) {
         val eng = g.engines.ready() ?: return
         if (t.thresholds.fit == null) return
         fitJob?.cancel()
-        fitJob = g.scope.launch(Dispatchers.Default) {
+        var self: kotlinx.coroutines.Job? = null
+        self = g.scope.launch(Dispatchers.Default) {
             try {
                 val r = FitNegatives.compute(t, repo, KnnAdapter(eng.knn))
-                val next = t.withFitNegatives(r.fits)
-                if (activeTwin?.id == t.id) {
+                // Apply to whatever the active Twin is NOW (a calibration / slider change meanwhile must not be lost), and
+                // only if no newer job has been started since (compute() cannot be cancelled mid-way).
+                val cur = activeTwin
+                if (cur != null && cur.id == t.id && fitJob === self && isActive) {
+                    val next = cur.withFitNegatives(r.fits)
                     activeTwin = next
+                    lineSession?.let { if (it.twin.id == next.id) it.twinUpdated(next) }
                     _active.value = summary(next)
                     _twins.value = _twins.value.map { if (it.id == next.id) summary(next) else it }
+                    g.log.write("fit", JSONObject().put("twin", t.id).put("manual", r.manual).put("twins", r.twins).put("skipped", r.skipped).put("tauFit", next.thresholds.fit?.tauFit).put("rule", next.thresholds.fit?.rule).put("margin", next.thresholds.fit?.margin))
                 }
-                g.log.write("fit", JSONObject().put("twin", t.id).put("manual", r.manual).put("twins", r.twins).put("tauFit", next.thresholds.fit?.tauFit).put("rule", next.thresholds.fit?.rule).put("margin", next.thresholds.fit?.margin))
             } catch (e: Throwable) {
                 Log.w(TAG, "fit negatives failed", e)
             }
         }
+        fitJob = self
     }
 
     private fun summary(t: TwinModel): TwinSummary {
         val c = t.certificate
-        val headline = if (c != null) CertificateText.lines(c).first() else t.withinPartLine()
-        val fitLine = t.thresholds.fit?.let { f ->
-            String.format(Locale.ROOT, "look-alike gate %.3f (%s)%s", f.tauFit, f.rule,
-                f.margin?.let { m -> String.format(Locale.ROOT, ", %d known other objects, margin %+.3f", f.neg.size, m) } ?: ", no other object known yet")
+        val alpha = c?.alpha
+        val headline = when {
+            c != null && alpha != null -> String.format(Locale.ROOT, "Calibrated with %d good parts — false alarms ≤ %.1f %% (%.0f %% confidence)", c.m, 100 * alpha, 100 * c.conf)
+            c != null -> "Calibration had no valid part — calibrate again"
+            t.thresholds.calibrated -> "Calibration outdated (wrong objects were added) — calibrate again"
+            else -> "Not calibrated yet — Calibrate with 40 good parts for a false-alarm bound"
         }
-        return TwinSummary(t.id, t.name, t.createdAtMs, t.keyframeCount, t.thresholds.calibrated, t.thresholds.tau, t.thresholds.tauId, headline, true, null, fitLine)
+        val fitLine = t.thresholds.fit?.let { f ->
+            f.margin?.let { m ->
+                if (m <= 0) "⚠ A known wrong object looks like this part — the look-alike gate cannot separate them"
+                else "Look-alike protection: ${f.neg.size} other object${if (f.neg.size == 1) "" else "s"} known"
+            } ?: "Look-alike protection: teach the look-alike as its own part, or add wrong objects"
+        }
+        return TwinSummary(t.id, t.name, t.createdAtMs, t.keyframeCount, c != null && alpha != null, t.thresholds.tau, t.thresholds.tauId, headline, true, null, fitLine)
     }
 
     fun selectTwin(id: String) {
@@ -307,7 +385,7 @@ class PipelineHub(val g: AppGraph) {
 
     fun deleteTwin(id: String) {
         g.scope.launch(Dispatchers.IO) {
-            repo.delete(id)
+            runCatching { repo.delete(id) }.onFailure { Log.e(TAG, "delete failed", it) }
             if (activeTwin?.id == id) {
                 activeTwin = null
                 g.prefs.activeTwinId = null
@@ -329,6 +407,9 @@ class PipelineHub(val g: AppGraph) {
         val eng = g.engines.ready() ?: run { _teach.value = TeachUi.Failed("Model not loaded (${g.engines.badge()})."); return }
         val sheet = sheetModel ?: run { _teach.value = TeachUi.Failed("Learn the empty sheet first."); return }
         val pipeline = TwinRepo.runningPipeline(eng)
+        circleCheck = null
+        circleBefore = null
+        pendingTeachCircle = null
         teachSession = TeachSession(camAnalysis, sheet, pipeline, name, SystemClock.elapsedRealtime(), seg = seg, circle = { teachCircle })
         _teach.value = TeachUi.Recording(0, 12_000, 0, 0, 0f, "Show the part", "…")
         mode = Mode.TEACH
@@ -382,7 +463,14 @@ class PipelineHub(val g: AppGraph) {
             res.fold(
                 onSuccess = { b ->
                     if (activate) {
-                        repo.save(b.twin, b.keyframeJpegs)
+                        try {
+                            repo.save(b.twin, b.keyframeJpegs)
+                        } catch (e: Throwable) {
+                            Log.e(TAG, "save failed", e)
+                            _teach.value = TeachUi.Failed("Could not save the part (${e.message}) — is the storage full?")
+                            onDone?.invoke(null)
+                            return@fold
+                        }
                         setActive(b.twin)
                         refreshTwins()
                     }
@@ -416,13 +504,22 @@ class PipelineHub(val g: AppGraph) {
             (0 until (seg?.length() ?: 0)).map { seg!!.getJSONObject(it) }.firstOrNull { it.optString("name") == "teach" }
                 ?.let { it.getLong("startMs")..it.getLong("endMs") }
         }
-        val r = ClipJobs.teachFromClip(clip, eng, clip.nameWithoutExtension.take(24), window = window, sampleEveryMs = if (window != null) 0L else 125L)
+        val negatives = runCatching { repo.negatives.globals(TwinRepo.runningPipeline(eng).fingerprint()) }.getOrDefault(emptyList())
+        val r = try {
+            ClipJobs.teachFromClip(clip, eng, clip.nameWithoutExtension.take(24), window = window, sampleEveryMs = if (window != null) 0L else 125L, negatives = negatives)
+        } catch (t: Throwable) {
+            return "teach from ${clip.name} failed: ${t.message}"
+        }
         val b = r.built ?: return "teach from ${clip.name} failed: ${r.message}"
-        repo.save(b.twin, b.keyframeJpegs)
+        try {
+            repo.save(b.twin, b.keyframeJpegs)
+        } catch (t: Throwable) {
+            return "could not save the part: ${t.message}"
+        }
         setActive(b.twin)
         refreshTwins()
         g.log.write("teach", JSONObject().put("twin", b.twin.id).put("fromClip", clip.name).put("keyframes", b.twin.keyframeCount).put("tau", b.twin.thresholds.tau))
-        return "Twin '${b.twin.name}' ready: ${b.lines.joinToString(" · ")}"
+        return "Part '${b.twin.name}' ready: ${b.lines.joinToString(" · ")}"
     }
 
     fun stopTeach() {
@@ -468,8 +565,9 @@ class PipelineHub(val g: AppGraph) {
         }
         when (mode) {
             Mode.LINE -> lineSession?.circle(roi, strokeId) { _circle.value = it }
-                ?: run { _circle.value = CircleResult(strokeId, false, "Learn the sheet first") }
+                ?: run { _circle.value = CircleResult(strokeId, false, "Not inspecting yet — learn the sheet first") }
             Mode.PREVIEW, Mode.TEACH -> pendingTeachCircle = roi to strokeId
+            Mode.SHEET -> _circle.value = CircleResult(strokeId, false, "Wait for the sheet to be learned")
             else -> _circle.value = CircleResult(strokeId, false, "Learn the sheet first (Step 1), then circle the part")
         }
     }
@@ -494,23 +592,11 @@ class PipelineHub(val g: AppGraph) {
         )
     }
 
-    /** Inspect-screen toggle: parts move across ("H"), down ("V") or are held still ("STEADY"). Restarts the session. */
-    fun setMotion(motion: String, restart: () -> Unit) {
-        when (motion) {
-            "STEADY" -> g.prefs.triggerMode = "STEADY"
-            else -> {
-                g.prefs.motion = motion
-                g.prefs.triggerMode = "BOTH"
-            }
-        }
-        restart()
-    }
-
     fun startLine(mode: LineMode) {
         stopLine()
-        val twin = activeTwin ?: return message("No Twin — teach a part first.")
-        val eng = g.engines.ready() ?: return message("Model not loaded (${g.engines.badge()}).")
-        if (TwinRepo.runningPipeline(eng).fingerprint() != twin.fingerprint) return message("This Twin was built with another model — re-teach it.")
+        val twin = activeTwin ?: return message("No part yet — teach a part first.")
+        val eng = g.engines.ready() ?: return message("Model still loading — try again in a moment.")
+        if (TwinRepo.runningPipeline(eng).fingerprint() != twin.fingerprint) return message("This part was built with another model — teach it again.")
         val sheet = sheetModel ?: return openInspect(mode)
         pendingLineMode = null
         run {
@@ -527,9 +613,9 @@ class PipelineHub(val g: AppGraph) {
 
     fun startReplay(clip: File, paced: Boolean, mode: LineMode) {
         stopLine()
-        val twin = activeTwin ?: return message("No Twin — teach a part first (or replay a teach clip).")
-        val eng = g.engines.ready() ?: return message("Model not loaded (${g.engines.badge()}).")
-        if (TwinRepo.runningPipeline(eng).fingerprint() != twin.fingerprint) return message("This Twin was built with another model — re-teach it.")
+        val twin = activeTwin ?: return message("No part yet — teach a part first (or replay a teach clip).")
+        val eng = g.engines.ready() ?: return message("Model still loading — try again in a moment.")
+        if (TwinRepo.runningPipeline(eng).fingerprint() != twin.fingerprint) return message("This part was built with another model — teach it again.")
         val analysis = FrameAnalysis(seg, stages)
         val src = ReplayFrameSource(clip, paced)
         var cap: SheetCapture? = SheetCapture(analysis, REPLAY_SHEET_FRAMES)
@@ -542,13 +628,19 @@ class PipelineHub(val g: AppGraph) {
             _inspect.value = ui.copy(source = "replay", replayFrame = replayPreview, replayProgress = if (p.total > 0) p.frames / p.total.toFloat() else null)
         }
         src.setConsumer { f ->
+            if (replay !== src) return@setConsumer                       // stopped (or replaced) meanwhile
             val c = cap
             if (c != null) {
                 if (c.offer(f)) {
                     val r = c.finish()
                     cap = null
-                    ls = LineSession(g, twin, mode, "replay:${clip.name}", eng, analysis, r.sheet, triggerConfig(), g.prefs.lineFraction.toDouble(), live = false, stages = stages, sensitivity = sens, publish = publish, screenMotion = g.prefs.motion)
-                    lineSession = ls
+                    val session = LineSession(g, twin, mode, "replay:${clip.name}", eng, analysis, r.sheet, triggerConfig(), g.prefs.lineFraction.toDouble(), live = false, stages = stages, sensitivity = sens, publish = publish, screenMotion = g.prefs.motion)
+                    if (replay === src) {
+                        ls = session
+                        lineSession = session
+                    } else {
+                        session.close()
+                    }
                 }
                 return@setConsumer
             }
@@ -558,7 +650,9 @@ class PipelineHub(val g: AppGraph) {
         g.log.openSession("replay_${clip.nameWithoutExtension}")
         _inspect.value = InspectUi(running = true, mode = mode.name, source = "replay", twinName = twin.name, message = "Replaying ${clip.name} (sheet from the first frames)…")
         src.start { p ->
-            ls?.drainAndClose()
+            val mine = replay === src
+            ls?.let { if (mine) it.drainAndClose() else it.close() }
+            if (!mine) return@start                                      // a newer session owns the screen now
             _inspect.value = _inspect.value.copy(
                 running = false, replayProgress = 1f,
                 message = p.error?.let { "Replay error: $it" } ?: "Replay finished: ${p.frames} frames, ${ls?.judgedCount ?: 0} parts judged",
@@ -576,22 +670,36 @@ class PipelineHub(val g: AppGraph) {
         _inspect.value = _inspect.value.copy(running = false)
     }
 
-    fun setSensitivity(v: Float) {
+    fun setSensitivity(v: Float, persist: Boolean = false) {
         val t = activeTwin ?: return
-        g.prefs.setSensitivity(t.id, v)
+        if (persist) g.prefs.setSensitivity(t.id, v)
         activeTwin = t.withSensitivity(v.toDouble())
         lineSession?.sensitivity = v.toDouble()
         _inspect.value = _inspect.value.copy(sensitivity = v)
     }
 
+    /** True when the current tolerance voids the calibrated certificate (τ·sensitivity below the calibration maximum). */
+    fun certificateVoidAtCurrentTolerance(): Boolean {
+        val t = activeTwin ?: return false
+        val c = t.certificate ?: return false
+        return !c.isValid(t.thresholds.tau, t.thresholds.sensitivity)
+    }
+
     fun finishCalibration() {
         val ls = lineSession ?: return
-        val t = activeTwin ?: return
-        val samples = ls.calibrationSamples()
-        val lat = ls.latencySamples()
+        if (ls.mode != LineMode.CALIBRATE) return
         val badge = g.engines.badge()
+        // Stop feeding frames, let the queued judges finish (the last parts count), then read the samples.
+        if (mode == Mode.LINE) mode = Mode.IDLE
+        lineSession = null
+        g.camera.setAnalysisFpsCap(30)
+        _inspect.value = _inspect.value.copy(running = false, message = "Finishing calibration…")
         g.scope.launch(Dispatchers.IO) {
             try {
+                ls.drainAndClose(15_000)
+                val samples = ls.calibrationSamples()
+                val lat = ls.latencySamples()
+                val t = activeTwin?.takeIf { it.id == ls.twin.id } ?: ls.twin
                 val (calibrated, r) = t.calibrate(samples, latenciesMs = lat, accelerator = badge)
                 repo.save(calibrated, null)
                 setActive(calibrated)
@@ -609,14 +717,18 @@ class PipelineHub(val g: AppGraph) {
     }
 
     private fun message(m: String) {
-        _inspect.value = _inspect.value.copy(message = m, running = false)
+        _inspect.value = _inspect.value.copy(message = m, running = false, needsSheet = false, hint = null)
     }
 
     // ------------------------------------------------------------------------------------------------ negatives
     fun startNegatives() {
         stopNegatives()
-        val twin = activeTwin ?: return
-        val eng = g.engines.ready() ?: return
+        val twin = activeTwin ?: run { _negatives.value = _negatives.value.copy(lastMessage = "No part yet — teach a part first."); return }
+        val eng = g.engines.ready() ?: run { _negatives.value = _negatives.value.copy(lastMessage = "Model still loading — try again in a moment."); return }
+        if (TwinRepo.runningPipeline(eng).fingerprint() != twin.fingerprint) {
+            _negatives.value = _negatives.value.copy(lastMessage = "This part was built with another model — teach it again first.")
+            return
+        }
         val sheet = sheetModel ?: run {
             _negatives.value = _negatives.value.copy(lastMessage = "Step 1: clear the sheet, then tap LEARN SHEET.")
             return
@@ -634,7 +746,9 @@ class PipelineHub(val g: AppGraph) {
 
     /** Negatives screen opened: learn a fresh sheet first. */
     fun openNegatives() {
+        stopLine()
         stopNegatives()
+        leaveCameraScreen()
         invalidateSheet()
         _negatives.value = NegativesUi(0, 0, "Step 1: clear the sheet, then tap LEARN SHEET.", null)
     }
@@ -649,7 +763,7 @@ class PipelineHub(val g: AppGraph) {
 
     // ------------------------------------------------------------------------------------------------ certificate / telemetry
     fun certificateLines(): List<String> {
-        val t = activeTwin ?: return listOf("No Twin selected.")
+        val t = activeTwin ?: return listOf("No part selected.")
         val th = t.thresholds
         val sens = g.prefs.sensitivity(t.id).toDouble()
         val head = String.format(Locale.ROOT, "%s · τ %.3f · τ_id %.3f (%s) · %d keyframes", t.name, th.tau, th.tauId, th.tauIdRule, t.keyframeCount)

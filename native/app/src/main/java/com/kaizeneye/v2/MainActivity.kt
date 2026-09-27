@@ -12,6 +12,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -43,7 +44,7 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         val g = AppGraph.get(this)
-        handleIntent(intent)
+        if (savedInstanceState == null) handleIntent(intent)
         setContent { KaizenTheme { AppRoot(g, nav) } }
     }
 
@@ -66,9 +67,12 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 private fun AppRoot(g: AppGraph, nav: Navigator) {
-    val permission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { }
+    val permission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+        g.cameraGranted.value = granted
+    }
     LaunchedEffect(Unit) {
-        if (!Readiness.cameraGranted(g.context)) permission.launch(Manifest.permission.CAMERA)
+        g.cameraGranted.value = Readiness.cameraGranted(g.context)
+        if (!g.cameraGranted.value) permission.launch(Manifest.permission.CAMERA)
         g.thermal.start(g.scope)
         if (g.engines.ready() == null) g.engines.autoLoad(com.kaizeneye.v2.ml.Models.choice(g.prefs.backbone))
     }
@@ -77,18 +81,24 @@ private fun AppRoot(g: AppGraph, nav: Navigator) {
         Modifier
             .fillMaxSize()
             .background(Kz.Bg)
-            .systemBarsPadding(),
+            .systemBarsPadding()
+            .imePadding(),
     ) {
-        when (val s = nav.current) {
-            Screen.Home -> HomeScreen(g, nav)
-            Screen.Teach -> TeachScreen(g, nav)
-            is Screen.Inspect -> InspectScreen(g, nav, s)
-            Screen.Certificate -> CertificateScreen(g, nav)
-            Screen.Telemetry -> TelemetryScreen(g, nav)
-            Screen.Readiness -> ReadinessScreen(g, nav)
-            Screen.Clips -> ClipsScreen(g, nav)
-            Screen.Negatives -> NegativesScreen(g, nav)
-            is Screen.SelfTest -> SelfTestScreen(g, nav, s.autoStart)
+        val s = nav.current
+        // Keyed on the screen value: a screen replaced by another instance of itself is fully recomposed (camera re-bound,
+        // its dispose effects run) instead of silently keeping the old composition.
+        androidx.compose.runtime.key(s, nav.stack.size) {
+            when (s) {
+                Screen.Home -> HomeScreen(g, nav)
+                Screen.Teach -> TeachScreen(g, nav)
+                is Screen.Inspect -> InspectScreen(g, nav, s)
+                Screen.Certificate -> CertificateScreen(g, nav)
+                Screen.Telemetry -> TelemetryScreen(g, nav)
+                Screen.Readiness -> ReadinessScreen(g, nav)
+                Screen.Clips -> ClipsScreen(g, nav)
+                Screen.Negatives -> NegativesScreen(g, nav)
+                is Screen.SelfTest -> SelfTestScreen(g, nav, s.autoStart)
+            }
         }
     }
 }

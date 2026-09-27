@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.OutlinedTextField
@@ -44,6 +45,8 @@ fun TeachScreen(g: AppGraph, nav: Navigator) {
     val live by g.hub.teachView.collectAsStateWithLifecycle()
     androidx.compose.runtime.LaunchedEffect(Unit) { g.hub.openTeach() }
     androidx.compose.runtime.DisposableEffect(Unit) { onDispose { g.hub.closeTeach() } }
+    // System back = the header back: a recording in progress is abandoned, never finished on the next screen's frames.
+    androidx.activity.compose.BackHandler { g.hub.resetTeach(); nav.back() }
     var name by remember { mutableStateOf("Part ${System.currentTimeMillis() % 1000}") }
 
     Column(Modifier.fillMaxSize()) {
@@ -58,20 +61,23 @@ fun TeachScreen(g: AppGraph, nav: Navigator) {
                 t.hint?.let {
                     Text(
                         it, color = Kz.Warn, fontSize = 18.sp, fontWeight = FontWeight.Bold,
-                        modifier = Modifier.align(Alignment.BottomCenter).padding(16.dp)
+                        modifier = Modifier.align(Alignment.TopStart).padding(16.dp)
                             .background(Kz.Bg.copy(alpha = 0.7f), RoundedCornerShape(8.dp)).padding(horizontal = 12.dp, vertical = 6.dp),
                     )
                 }
             }
         }
-        Column(Modifier.fillMaxWidth().background(Kz.Surface).padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Column(
+            Modifier.fillMaxWidth().background(Kz.Surface).verticalScroll(androidx.compose.foundation.rememberScrollState()).padding(14.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
             when (val t = teach) {
                 TeachUi.Idle -> {
                     if (sheet.state != SheetUi.State.READY) {
                         Text("Step 1 — learn the empty sheet", color = Kz.Text, fontWeight = FontWeight.SemiBold)
                         Note("Phone fixed on a stand, looking down at a plain matte sheet that contrasts with the part. Take the part and your hands off the sheet, then tap LEARN SHEET (2 s).", Kz.Text)
-                        Note(sheet.detail)
-                        Note("Something other than the sheet in view (table, stand, floor)? Zoom in until only the sheet is visible — only the zoomed view is used.")
+                        if (sheet.state == SheetUi.State.FAILED) Text(sheet.detail, color = Kz.Defect, fontSize = 13.sp)
+                        Note("Zoom in until only the sheet is visible.")
                         ZoomControl(g, Modifier.fillMaxWidth())
                         if (sheet.state == SheetUi.State.CAPTURING) LinearProgressIndicator(progress = { sheet.progress }, modifier = Modifier.fillMaxWidth())
                         PrimaryButton("LEARN SHEET", Modifier.fillMaxWidth(), enabled = sheet.state != SheetUi.State.CAPTURING) { g.hub.captureSheet() }
@@ -79,34 +85,33 @@ fun TeachScreen(g: AppGraph, nav: Navigator) {
                         Text("Step 2 — circle the part, then record it for 12 s", color = Kz.Text, fontWeight = FontWeight.SemiBold)
                         CircleHint(g, live.circled)
                         live.hint?.let { Text(it, color = if (live.boxes.firstOrNull()?.state == com.kaizeneye.v2.pipeline.OverlayState.PASS) Kz.Pass else Kz.Warn, fontSize = 13.sp) }
-                        Note("Sheet: ${sheet.detail}${sheet.flicker?.let { " · $it" } ?: ""}")
+                        if (sheet.detail.contains("NOT plain")) Text("Background not plain — use a single-colour matte sheet, then Re-learn sheet.", color = Kz.Warn, fontSize = 13.sp)
                         Note("Keep the part fully in view; turn it slowly so every side that matters is seen.")
                         OutlinedTextField(value = name, onValueChange = { name = it.take(40) }, label = { Text("Part name") }, singleLine = true, modifier = Modifier.fillMaxWidth())
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             PrimaryButton("START RECORDING", Modifier.weight(1f)) { g.hub.startTeach(name.ifBlank { "Part" }) }
-                            SecondaryButton("Zoom / sheet") { g.hub.releaseSheet() }
+                            SecondaryButton("Re-learn sheet") { g.hub.releaseSheet() }
                         }
                     }
                 }
                 is TeachUi.Recording -> {
                     Text("Recording… ${t.elapsedMs / 1000}/${t.totalMs / 1000} s", color = Kz.Text, fontWeight = FontWeight.SemiBold)
                     LinearProgressIndicator(progress = { (t.elapsedMs.toFloat() / t.totalMs).coerceIn(0f, 1f) }, modifier = Modifier.fillMaxWidth())
-                    Note("frames ${t.accepted}/${t.seen} usable · coverage ${(t.coverage * 100).toInt()} % · ${t.sanity}")
                     live.hint?.let { Text(it, color = if (live.boxes.firstOrNull()?.state == com.kaizeneye.v2.pipeline.OverlayState.PASS) Kz.Pass else Kz.Warn, fontSize = 13.sp) }
                     if (!live.circled) Note("Tip: circle the part with your finger so only it is recorded.")
                     SecondaryButton("Stop early", enabled = t.elapsedMs >= 6000) { g.hub.stopTeach() }
                 }
                 is TeachUi.Building -> {
-                    Text("Building the Twin — ${t.stage}", color = Kz.Text, fontWeight = FontWeight.SemiBold)
+                    Text("Building the part model…", color = Kz.Text, fontWeight = FontWeight.SemiBold)
                     LinearProgressIndicator(progress = { t.progress.coerceIn(0f, 1f) }, modifier = Modifier.fillMaxWidth())
                 }
                 is TeachUi.Armed -> {
-                    Text("ARMED — ${t.twin.name}", color = Kz.Pass, fontWeight = FontWeight.Bold, fontSize = 18.sp)
-                    Note("tap → armed in ${"%.1f".format(t.tapToArmedMs / 1000.0)} s (target ≤ 30 s)")
-                    t.lines.forEach { Text(it, color = if (it.startsWith("⚠")) Kz.Warn else Kz.Text, fontSize = 13.sp, fontFamily = Kz.Mono) }
+                    Text("READY — ${t.twin.name}", color = Kz.Pass, fontWeight = FontWeight.Bold, fontSize = 18.sp)
+                    Note("Ready ${"%.0f".format(t.tapToArmedMs / 1000.0)} s after the tap")
+                    t.lines.firstOrNull()?.let { Text(it, color = if (it.startsWith("⚠")) Kz.Warn else Kz.Text, fontSize = 13.sp) }
                     PrimaryButton("INSPECT NOW", Modifier.fillMaxWidth()) { nav.replace(Screen.Inspect(LineMode.INSPECT)) }
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        SecondaryButton("Add negatives", Modifier.weight(1f)) { nav.replace(Screen.Negatives) }
+                        SecondaryButton("Wrong objects", Modifier.weight(1f)) { nav.replace(Screen.Negatives) }
                         SecondaryButton("Calibrate", Modifier.weight(1f)) { nav.replace(Screen.Inspect(LineMode.CALIBRATE)) }
                     }
                 }

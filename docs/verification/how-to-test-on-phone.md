@@ -7,7 +7,7 @@ for ½ s or crosses the dashed line, and nothing on screen said so. Now the back
 **LEARN SHEET** (then exposure, colour and focus are locked), specks are ignored, and a banner says what to do next.
 
 ## 0a. What changed for accuracy (read once)
-- **Re-teach your parts.** This build tells look-alike parts apart much better (see `accuracy-v2.md`); Twins taught with
+- **Re-teach your parts** (again after the 07:45 build: the crop rule for round parts changed). This build tells look-alike parts apart much better (see `accuracy-v2.md`); Twins taught with
   the old build show "built with another pipeline" on Home and cannot be used — Delete them and teach again.
 - The app now uses the **DINOv2** model (`dinov2_s14_448_fp16w.tflite`, pushed to `…/files/models/`) when it is on the phone,
   else the old ResNet18. The Home chip says `CPU 127 ms` for DINOv2 — teaching takes ~10 s longer, judging ~0.25 s per part.
@@ -15,14 +15,14 @@ for ½ s or crosses the dashed line, and nothing on screen said so. Now the back
   no longer matters how the part lies.
 - A new **look-alike gate** rejects a different object made of the same materials (a second black earbud case) as
   **NOT THE PART**. Teach your second look-alike part as its own Twin and the two learn each other automatically; or use
-  **Negatives** (Home) to show a look-alike for 2 s each.
+  **Wrong objects** (Home) to show a look-alike for ½ s each.
 
 ## 0. Install the latest build
 ```
 adb install -r native\dist\apk\KaizenEye2-phonefree-debug.apk
 ```
 (`-r` keeps your Twins. First launch: allow the camera; the app measures the accelerators once, ~10–30 s.)
-Turn the **notification volume up** and Do Not Disturb off; the reject beep uses the notification sound.
+Turn the **alarm volume up**; the reject beep uses the alarm sound (it is not silenced by Do Not Disturb).
 
 ## 1. Set up the scene (this decides whether it works)
 - **Phone fixed**, not in your hand: on a stand / tripod / stack of books, camera looking **straight down**,
@@ -48,7 +48,7 @@ Turn the **notification volume up** and Do Not Disturb off; the reject beep uses
 4. Type a **Part name** → **START RECORDING**. For 12 s, slowly turn and shift the part in place (nudge it with a pen,
    or turn it and pull your hand away — frames with your hand in them are skipped). Keep it inside the picture.
    Watch "frames x/y usable": 40+ is good; below ~15 the teach fails ("Not enough sharp frames").
-5. Wait for **ARMED — <name>** (~10–25 s). Read the first line of the card: **Good teach** or **⚠ Weak teach** (few
+5. Wait for **READY — <name>** (~10–25 s). Read the first line of the card: **Good teach** or **⚠ Weak teach** (few
    usable frames — teach again with the part circled, fully in view, hands away, turning slowly). If "Teach failed", read
    why and **TRY AGAIN**.
 
@@ -57,10 +57,7 @@ Turn the **notification volume up** and Do Not Disturb off; the reject beep uses
 2. **Step 1** panel: set **Zoom** so only the sheet is visible (same zoom as when teaching; it is remembered), take
    everything off the sheet → **LEARN SHEET** → wait 2 s (this also locks exposure, colour and
    focus for this screen). Do this again (**Re-learn sheet**) whenever the light or the phone position changes.
-3. **Parts move** chips at the bottom:
-   - **across** (default): judged when the part crosses the dashed line left↔right, *or* stays still for ½ s;
-   - **down**: same, with a horizontal line (parts move top↔bottom);
-   - **held still**: only the ½ s still-hold (best when placing parts by hand).
+3. A part is judged when it stays still for ½ s **or** crosses the dashed line (left↔right) — no setting needed.
 4. Put ONE part on the sheet, take your hand away, keep it still ~1 s — or **circle it with your finger** to judge it
    right away. After a circle, only that area is inspected ("Circled area only"; next parts go in the same spot);
    **Whole view** undoes it. The box on the part:
@@ -69,7 +66,7 @@ Turn the **notification volume up** and Do Not Disturb off; the reject beep uses
    - **red REJECT #n** + red marks where it differs — defect (beep + vibration);
    - **violet NOT THE PART #n** — a different object (beep + vibration);
    - **dashed grey REFRAME** — could not judge (touching the edge, two objects…).
-   Counters at the top (judged / pass / defect / not part / reframe); the card at the bottom explains the last reject.
+   Counters at the top (PASS / REJECT / NOT THE PART); the card at the bottom explains the last reject.
 5. Take the part completely out of the picture before the next one (each appearance is judged once).
 
 ## 4. What to try
@@ -78,27 +75,28 @@ Turn the **notification volume up** and Do Not Disturb off; the reject beep uses
 - A good copy with a marker dot / scratch → REJECT.
 - Good parts rejected (red REJECT or violet NOT THE PART)? Move **Tolerance** to the right (1.2–1.5×; range 0.5–2.5×).
   Defects or look-alikes passing? Move it left. (The look-alike gate follows the slider by its square root.)
-- Better "not the part": Home → **Negatives** → LEARN SHEET → hold 5–10 *different* wrong objects still, one by one
-  → **DONE**.
-- Certificate: Home → **Calibrate** → LEARN SHEET → present ≥ 40 *distinct* good parts (not the taught one) →
-  **FINISH CALIBRATION** → the Certificate opens.
+- Better "not the part": Home → **Wrong objects** → LEARN SHEET → hold 5–10 *different* wrong objects still, one by
+  one → **DONE**, then calibrate again.
+- Certificate: Home → **Calibrate** → LEARN SHEET → present 40 *distinct* good parts (not the taught one) →
+  **FINISH CALIBRATION** → the Certificate opens. Do Wrong objects BEFORE calibrating (adding them afterwards voids the certificate).
 
 ## 5. If it goes wrong
 | You see | Why | Fix |
 |---|---|---|
 | Table / stand / floor visible around the sheet | the sheet is smaller than the view | **Zoom** in (Teach: "Zoom / sheet"; Inspect: "Zoom"), then LEARN SHEET again |
 | "Too many blobs" / boxes on the background | background not plain, phone moved, light changed | plain sheet filling the view, phone on a stand, **Re-learn sheet** |
+| INSPECT / TEACH greyed out "LOADING MODEL…" | the model is still loading (10–30 s after start) | wait for the chip to say "Model ready" |
 | No box on the part / "No part seen" | part colour too close to the sheet | contrasting sheet |
 | "touches the edge" | part near the edge or your hand in view | move the part inward, hand out |
 | "too small" | part tiny in the picture | move the phone closer (part ≥ ~1/10 of the picture width) |
 | Nothing happens | phone moving, part not still, or hand still in view | stand; take the hand away; "held still" mode |
-| A different but similar part shows PASS | look-alike gate not learned it yet | teach that part as its own Twin (both Twins then know each other), or Home → **Negatives** and hold the look-alike still for 2 s each; then check the Home card: "look-alike gate … margin +…" |
-| Everything "NOT THE PART" | poor teach or different light | re-teach with a green box the whole time; re-learn sheet; add Negatives |
-| No beep | notification volume muted / Do Not Disturb | turn it up (vibration still works) |
-| Home chip says "model error — see Telemetry" | model/accelerator failed to load | Telemetry → **Accelerator** or **Re-benchmark all**; send the self-test |
+| A different but similar part shows PASS | look-alike gate not learned it yet | teach that part as its own part (both then know each other), or Home → **Wrong objects** and hold the look-alike still for ½ s each; the Home card then says "Look-alike protection: N other objects known" |
+| Everything "NOT THE PART" | poor teach or different light | re-teach with a green box the whole time; re-learn sheet; add Wrong objects |
+| No beep | alarm volume at 0 | turn the alarm volume up (vibration still works) |
+| Home chip says "Model error" | model/accelerator failed to load | Home → Advanced → Telemetry → **Re-benchmark all**; send the self-test |
 
 ## 6. Send results to the laptop
-Home → **Self-test** → **RUN ALL**, then:
+Home → **Advanced ▾** → **Self-test** → **RUN ALL**, then:
 ```
 adb pull /sdcard/Android/data/com.kaizeneye.v2/files/selftest/selftest.json
 adb pull /sdcard/Android/data/com.kaizeneye.v2/files/logs

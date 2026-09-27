@@ -109,16 +109,21 @@ class NegativesStore(val rootDir: File) {
         require(ID_OK.matches(id)) { "bad negative id '$id'" }
         val dir = File(rootDir, id)
         require(dir.isDirectory) { "no such negative $id" }
-        dir.listFiles { f -> f.name.startsWith("map_") || f.name.startsWith("mapcov_") }?.forEach { it.delete() }
+        maps.forEachIndexed { i, m -> require(m.features.size == patches * dim && m.cov.size == patches) { "map $i has the wrong size" } }
+        // Write under temp names first, then swap, so a crash never leaves a half-written set.
         maps.forEachIndexed { i, m ->
-            require(m.features.size == patches * dim && m.cov.size == patches) { "map $i has the wrong size" }
-            F16File.write(File(dir, "map_$i.f16"), patches, dim, m.features)
-            F16File.write(File(dir, "mapcov_$i.f16"), 1, patches, m.cov)
+            F16File.write(File(dir, "map_$i.f16$TMP"), patches, dim, m.features)
+            F16File.write(File(dir, "mapcov_$i.f16$TMP"), 1, patches, m.cov)
+        }
+        dir.listFiles { f -> (f.name.startsWith("map_") || f.name.startsWith("mapcov_")) && !f.name.endsWith(TMP) }?.forEach { it.delete() }
+        maps.indices.forEach { i ->
+            File(dir, "map_$i.f16$TMP").renameTo(File(dir, "map_$i.f16"))
+            File(dir, "mapcov_$i.f16$TMP").renameTo(File(dir, "mapcov_$i.f16"))
         }
     }
 
-    /** The feature maps stored for negative [id] (empty when it has none). */
-    fun maps(id: String): List<NegativeMap> {
+    /** The feature maps stored for negative [id] that match `patches × dim` (others are skipped); empty when it has none. */
+    fun maps(id: String, patches: Int, dim: Int): List<NegativeMap> {
         require(ID_OK.matches(id)) { "bad negative id '$id'" }
         val dir = File(rootDir, id)
         val out = ArrayList<NegativeMap>()
@@ -128,9 +133,11 @@ class NegativesStore(val rootDir: File) {
             val c = File(dir, "mapcov_$i.f16")
             if (!f.isFile || !c.isFile) break
             try {
-                out += NegativeMap(F16File.read(f).data, F16File.read(c).data)
+                val fm = F16File.read(f)
+                val cm = F16File.read(c)
+                if (fm.rows == patches && fm.cols == dim && cm.rows * cm.cols == patches) out += NegativeMap(fm.data, cm.data)
             } catch (e: IOException) {
-                break
+                // damaged entry: skip it
             }
             i++
         }

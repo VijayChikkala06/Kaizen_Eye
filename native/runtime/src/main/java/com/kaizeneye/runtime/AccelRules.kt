@@ -245,6 +245,8 @@ internal object AccelRules {
                 base == null -> notes[cand.label] = "${cand.baselineLabel} baseline unavailable, so acceleration cannot be verified - not used"
                 t.minMs > MAX_TIME_VS_CPU * base.minMs -> notes[cand.label] =
                     "${noSpeedupText(cand)}: best ${fmtMs(t.minMs)} vs ${fmtMs(base.minMs)} ms on ${cand.baselineLabel}"
+                t.medianMs > MAX_TIME_VS_CPU * base.medianMs -> notes[cand.label] =
+                    "${noSpeedupText(cand)}: median ${fmtMs(t.medianMs)} vs ${fmtMs(base.medianMs)} ms on ${cand.baselineLabel}"
                 else -> eligible += cand to t
             }
         }

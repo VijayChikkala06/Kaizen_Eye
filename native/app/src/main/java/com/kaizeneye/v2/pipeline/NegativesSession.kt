@@ -43,7 +43,11 @@ class NegativesSession(
         val comps = a.partCandidates(analysis.params.minAreaFrac)
         val upd = tr.update(a.tMs, com.kaizeneye.core.track.Detections.of(comps, a.grey, a.w, a.h, a.index))
         for (fired in upd.triggers) {
-            if (fired.trigger != Trigger.STEADY || busy) continue
+            if (fired.trigger != Trigger.STEADY) continue
+            if (busy) {
+                publish("Still saving the previous object — lift it and hold it again")
+                continue
+            }
             val idx = upd.assignments.indexOfFirst { it == fired.trackId }
             if (idx < 0) continue
             val comp = comps[idx]
@@ -81,10 +85,8 @@ class NegativesSession(
             if (next.thresholds.fit != null) next = next.withFitNegatives(FitNegatives.compute(next, repo, KnnAdapter(engines.knn)).fits)
             repo.save(next, null)
             twin = next
-            val warn = if (sim >= t.thresholds.tauId) " (it WOULD have passed the old identity gate)" else ""
-            val nf = next.thresholds.fit
-            val fitNote = if (nf != null && fitBefore != null) String.format(Locale.ROOT, " · look-alike gate %.3f → %.3f", fitBefore, nf.tauFit) else ""
-            publish(String.format(Locale.ROOT, "Added negative #%d · similarity %.3f%s%s", added, sim, warn, fitNote), next)
+            val warn = if (sim >= t.thresholds.tauId) " — it looked like your part before; now it is rejected" else ""
+            publish("Added wrong object #$added ✓$warn", next)
         } catch (t: Throwable) {
             Log.e("KaizenNegatives", "negative capture failed", t)
             publish("Capture failed: ${t.message}")

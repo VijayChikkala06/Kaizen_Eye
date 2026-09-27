@@ -59,11 +59,12 @@ class FitGateTest {
         // Calibration fits join the same-part spread.
         val cal = FitThreshold.derive(pos, DoubleArray(0), FitParams(), doubleArrayOf(0.6))
         assertEquals(0.66, cal.tauFit, 1e-12)
-        // The slider moves the gate by its square root.
-        assertTrue(a.passes(0.55, 1.0))
-        assertFalse(a.passes(0.56, 1.0))
-        assertTrue(a.passes(0.56, 1.44))
-        assertTrue(a.passes(Double.NaN))
+        // The gate itself: no gate passes everything, a gate never passes a NaN fit; the slider scales by its square root.
+        assertTrue(VerdictEngine.fitPasses(0.55, a.tauFit))
+        assertFalse(VerdictEngine.fitPasses(0.56, a.tauFit))
+        assertTrue(VerdictEngine.fitPasses(0.56, a.tauFit * FitThreshold.scale(1.44)))
+        assertFalse(VerdictEngine.fitPasses(Double.NaN, a.tauFit))
+        assertTrue(VerdictEngine.fitPasses(Double.NaN, Double.NaN))
     }
 
     @Test

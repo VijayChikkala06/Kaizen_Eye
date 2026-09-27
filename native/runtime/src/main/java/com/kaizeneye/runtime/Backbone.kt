@@ -126,8 +126,14 @@ internal class BackboneImpl(
             return runLocked(wantCls)
         } catch (t: Throwable) {
             if (accel == Accel.CPU) throw t
-            switchToCpuLocked(t)
-            return runLocked(wantCls)
+            // One transient accelerator error (a driver hiccup) is retried before the instance falls back to CPU for good.
+            try {
+                patchIndex = -1
+                return runLocked(wantCls)
+            } catch (t2: Throwable) {
+                switchToCpuLocked(t2)
+                return runLocked(wantCls)
+            }
         }
     }
 

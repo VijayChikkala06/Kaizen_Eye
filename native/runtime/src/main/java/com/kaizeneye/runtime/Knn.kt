@@ -232,6 +232,9 @@ internal class KnnEngineImpl(
             KnnMath.validate(feats, nq, bank, nb, dim, extra)
             if (nq == 0) return FloatArray(0)
             if (nb == 0) return FloatArray(nq) { KnnMath.KNN_MASK }
+            // A NaN / infinite feature (a glitched accelerator frame) must not disable the graphs for good: answer NaN.
+            for (i in 0 until nq * dim) if (!feats[i].isFinite()) return FloatArray(nq) { Float.NaN }
+            if (extra != null) for (v in extra) if (v.isNaN()) return FloatArray(nq) { Float.NaN }
             if (graphs.isNotEmpty() && disabled == null) {
                 if (dim == d) {
                     try {

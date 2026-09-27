@@ -14,7 +14,8 @@ import android.util.Log
  */
 class Alarm(context: Context) {
     private val tone: ToneGenerator? = try {
-        ToneGenerator(AudioManager.STREAM_NOTIFICATION, 100)
+        // The alarm stream: not silenced by the ring / notification switch or Do Not Disturb (a reject must be heard).
+        ToneGenerator(AudioManager.STREAM_ALARM, 100)
     } catch (t: Throwable) {
         Log.w("KaizenAlarm", "no tone generator", t)
         null

@@ -35,7 +35,7 @@ class TwinRepo(dirs: AppDirs) {
         TwinSummary(
             id = s.id, name = s.name, createdAtMs = s.createdAtMs, keyframes = s.keyframes, calibrated = s.calibrated,
             tau = Double.NaN, tauId = Double.NaN,
-            headline = if (s.calibrated) "calibrated" else "not calibrated — within-part bound only",
+            headline = if (s.calibrated) "Calibrated" else "Not calibrated yet",
             loadable = loadable,
             problem = if (loadable) null else "built with another pipeline (backbone/model changed) — re-teach or rebuild",
         )
@@ -71,7 +71,9 @@ class TwinRepo(dirs: AppDirs) {
                 dim = spec.dim,
                 precision = precision,
                 l2NormalizePatches = spec.l2NormalizePatches,
-                preprocessVersion = 1,
+                // 2 = canonical crops of near-round parts (covariance aspect >= 0.85) are taken at θ = 0 (stable), see
+                // FrameAnalysis.canonicalSnapshot; Twins taught before that rule cannot be judged with it.
+                preprocessVersion = if (accuracy) 2 else 1,
                 mask = PipelineMaskParams(
                     analysisFactor = seg.analysisFactor, kSigma = seg.kSigma, sigmaMin = seg.sigmaMin, minBlobPx = seg.minBlobPx,
                     borderMargin = seg.borderMargin, cropMargin = seg.cropMargin, coreThreshold = seg.coreThreshold,
