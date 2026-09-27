@@ -15,17 +15,41 @@
 
 ---
 
-## 1. The problem and why it matters
+## 1. Problem statement
 
-| Today | Pain |
-|---|---|
-| Manual visual inspection | Slow, tired eyes miss defects, no record of *why* something was rejected |
-| Industrial vision systems | Expensive cameras + PC + integrator, weeks of setup, need hundreds of labelled photos per part |
-| Cloud AI inspection | Needs internet, uploads product photos (IP / privacy risk), latency, subscription |
+### The problem, in one paragraph (say this)
 
-**Our answer:** the phone already has a good camera, a fast chip and an AI accelerator. Put it on a stand over the line and it becomes the inspector.
+> Small and medium manufacturers still inspect most parts **by eye**: it is slow, it depends on how tired the inspector is, and it leaves **no record of why** a part was passed or rejected. The alternative — an industrial machine-vision system — needs a special camera, a PC, an integrator and **hundreds of labelled photos of every part, including defective ones**, so it is out of reach for anyone without an AI team. Cloud AI services are cheaper to start but need **internet and upload product photos**, which many factories cannot or will not do.
+> **There is no inspector that is cheap, learns a new part in minutes, works offline and can prove how reliable it is.**
 
-**Who it is for:** small and medium manufacturers, workshops, packing lines, incoming-goods checks — anywhere the same part is checked again and again and nobody has an AI team.
+### Problem statement (one sentence, for the slide)
+
+**"Visual quality inspection is still manual or locked behind expensive, data-hungry, cloud-dependent systems — leaving small manufacturers with no affordable, private, easy-to-teach way to inspect parts."**
+
+### The gaps we close
+
+| Gap today | What that costs the user | How Kaizen Eye closes it |
+|---|---|---|
+| Manual inspection is inconsistent | Missed defects, customer returns, no audit trail | Same check on every part, every verdict logged with its scores |
+| ML inspection needs hundreds of labelled images (and defect examples) | Weeks of setup, an AI engineer per part | **One 12-second video of a good part**; no defect examples needed |
+| Industrial systems are expensive and fixed | Only large factories can afford them | An ordinary Android phone + a stand |
+| Cloud tools need internet and upload photos | IP / privacy risk, no use on a plain shop floor | **Fully offline** — the app has no internet permission at all |
+| Systems give a score but no reasons | Operators do not trust "black boxes" | Shows *where* the defect is and explains it in one plain sentence |
+| No proof of reliability | Cannot show a customer or auditor how good the check is | Built-in **calibration + certificate** with a measured false-alarm bound |
+
+## 1b. Who it is useful for
+
+| Who | Their situation | What they get |
+|---|---|---|
+| **Small / medium manufacturers and workshops** (machining, moulding, packaging, electronics assembly) | Repeated visual checks, no budget for machine vision | Inspection station for the price of a phone and a stand; new part learned in minutes |
+| **Quality / incoming-goods teams** | Check supplier parts against a golden sample | Teach the good sample once; "wrong part / defect / OK" with a record |
+| **Packing and dispatch lines** | Wrong item or damaged item slips through | Live PASS / REJECT with beep and vibration at the station |
+| **Contract manufacturers and job shops** | Many different parts, short runs | Re-teach per job in seconds; no training pipeline |
+| **Quality managers and auditors** | Need evidence, not opinions | Certificate with a statistical false-alarm bound, per-part logs |
+| **Places with no or restricted internet / strict data rules** (defence-adjacent, medical, IP-sensitive) | Cannot upload product images | Nothing leaves the device — provable |
+| **Education / makerspaces / start-ups** | Want to prototype inspection cheaply | A working inspector on hardware they already own |
+
+**The value in one line for each stakeholder:** operators get a clear verdict and a reason; managers get a measured reliability number; owners get a system that costs a fraction of a machine-vision cell and needs no cloud.
 
 ---
 
@@ -112,7 +136,26 @@ Say it like this (no jargon needed):
 
 ---
 
-## 6. Tech stack (reads well on a slide)
+## 6. Tech stack
+
+### In brief (30 seconds — say this)
+
+> "It is a **native Android app written in Kotlin** with a Jetpack Compose interface and CameraX for the live camera. The AI runs **on-device through Google's LiteRT runtime**, which can target the CPU, GPU or the Snapdragon NPU; the app **benchmarks all three on the phone and only uses (and claims) the one that is really faster**. The vision model is Meta's **DINOv2**, which turns small squares of the image into numbers; the part's 'memory' is a set of those numbers, and judging is a **nearest-neighbour search** against it. An optional small **vision-language model (FastVLM)** writes a one-sentence explanation, also offline. The core maths is pure Kotlin and was **verified against an independent Python/numpy implementation**."
+
+### One-line table (for the slide)
+
+| What | Used for |
+|---|---|
+| **Kotlin + Jetpack Compose** | The whole native Android app and UI |
+| **CameraX (+ Camera2)** | 30 fps live camera, locked exposure / focus / white-balance |
+| **LiteRT (CPU / GPU / NPU) + Qualcomm QNN** | Running AI models on the phone's chips, with honest benchmarking |
+| **DINOv2-S/14** (ResNet18 as fast alternative) | Turning image patches into "fingerprints" |
+| **k-NN search (custom LiteRT graph)** | Finding the closest remembered patch = the anomaly score |
+| **FastVLM-0.5B (LiteRT-LM)** | Optional offline explanation sentence |
+| **Kotlin core module + numpy reference** | Testable maths, independently verified |
+| **Gradle / JUnit** | Build and 244 automated tests |
+
+### Detailed table
 
 | Layer | Technology |
 |---|---|

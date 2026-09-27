@@ -20,6 +20,7 @@ ENV/
 out/
 dist/
 build/
+bin/
 *.egg-info/
 *.pt
 *.pth
